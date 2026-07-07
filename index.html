@@ -6,7 +6,7 @@
 <title>Boltracker</title>
 <style>
   :root {
-    --bg: #10161f; --surface: #18212e; --line: #2a3648;
+    --bg: #10161f; --surface: #18212e; --surface2: #1e2938; --line: #2a3648;
     --text: #e8edf4; --muted: #8494ab;
     --green: #4ade80; --red: #f87171; --gold: #facc15; --blue: #60a5fa;
   }
@@ -14,17 +14,38 @@
   body { background: var(--bg); color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
   .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
-  header { display: flex; align-items: baseline; justify-content: space-between;
-    padding: 28px 32px 20px; border-bottom: 1px solid var(--line); flex-wrap: wrap; gap: 8px; }
+  header { display: flex; align-items: center; justify-content: space-between;
+    padding: 24px 32px 18px; border-bottom: 1px solid var(--line); flex-wrap: wrap; gap: 12px; }
   header h1 { font-size: 20px; font-weight: 700; letter-spacing: .5px; }
   header h1 span { color: var(--gold); }
-  .meta { color: var(--muted); font-size: 13px; }
+  .meta { color: var(--muted); font-size: 13px; margin-top: 4px; }
   .meta b { color: var(--text); }
+  .live-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green); box-shadow: 0 0 6px rgba(74,222,128,.6); margin-right: 5px;
+    vertical-align: baseline; }
+  .live-dot.err { background: var(--red); box-shadow: 0 0 6px rgba(248,113,113,.6); }
+  .controls { display: flex; gap: 8px; }
+  .btn { background: var(--surface); border: 1px solid var(--line); color: var(--muted);
+    border-radius: 8px; padding: 7px 12px; font-size: 12px; cursor: pointer; font-weight: 600; }
+  .btn:hover { border-color: var(--muted); color: var(--text); }
+  .btn.on { color: var(--gold); border-color: rgba(250,204,21,.45); }
+  #banner { display: none; max-width: 1400px; margin: 16px auto -8px; padding: 0 32px; }
+  #banner .inner { border-radius: 10px; padding: 12px 16px; font-size: 13px; line-height: 1.5; }
+  #banner.warn .inner { background: rgba(250,204,21,.08); border: 1px solid rgba(250,204,21,.35); color: var(--gold); }
+  #banner.err .inner { background: rgba(248,113,113,.08); border: 1px solid rgba(248,113,113,.35); color: var(--red); }
   main { display: grid; grid-template-columns: 1fr 380px; gap: 24px;
     padding: 24px 32px; max-width: 1400px; margin: 0 auto; }
   @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
   h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px;
     color: var(--muted); margin-bottom: 14px; }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+  .toolbar input, .toolbar select { background: var(--surface); border: 1px solid var(--line);
+    color: var(--text); border-radius: 8px; padding: 8px 12px; font-size: 13px; outline: none; }
+  .toolbar input { flex: 1 1 180px; min-width: 140px; }
+  .toolbar input:focus, .toolbar select:focus { border-color: var(--blue); }
+  .chip { background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 999px;
+    padding: 6px 12px; font-size: 12px; cursor: pointer; font-weight: 600; }
+  .chip.active { color: var(--text); border-color: var(--blue); background: rgba(96,165,250,.1); }
   .grid { display: grid; gap: 12px; }
   .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
     padding: 16px 18px; display: grid; grid-template-columns: 14px 1fr auto; gap: 14px; align-items: center; }
@@ -32,11 +53,26 @@
   .dot.in { background: var(--green); box-shadow: 0 0 10px rgba(74,222,128,.5); }
   .dot.out { background: var(--red); opacity: .7; }
   .dot.listed { background: var(--gold); box-shadow: 0 0 8px rgba(250,204,21,.4); }
+  .card.hot { border-color: rgba(250,204,21,.4); }
   .card .name { font-weight: 600; font-size: 15px; }
+  .card .star { cursor: pointer; font-size: 13px; margin-left: 6px; opacity: .35; user-select: none; }
+  .card .star.on { opacity: 1; }
   .card .sub { color: var(--muted); font-size: 12px; margin-top: 3px; }
-  .card .price { font-size: 20px; font-weight: 700; text-align: right; }
+  .card .actions { margin-top: 6px; display: flex; gap: 10px; align-items: center; }
+  .card .right { text-align: right; }
+  .card .price { font-size: 20px; font-weight: 700; }
   .card .price small { display: block; font-size: 11px; color: var(--muted); font-weight: 400; }
   .card a { color: var(--blue); text-decoration: none; font-size: 12px; }
+  .buy { display: inline-block; background: var(--gold); color: #241a00; font-weight: 700;
+    font-size: 12px; padding: 5px 12px; border-radius: 7px; text-decoration: none; }
+  .buy:hover { filter: brightness(1.08); }
+  .buy.dim { background: var(--surface2); color: var(--muted); font-weight: 600; }
+  .event .buy { padding: 2px 9px; font-size: 11px; margin-left: 4px; }
+  .spark { display: block; margin: 0 0 4px auto; }
+  .spark polyline { fill: none; stroke-width: 1.5; }
+  .spark.down polyline { stroke: var(--green); }
+  .spark.up polyline { stroke: var(--red); }
+  .spark.flat polyline { stroke: var(--muted); }
   .event { padding: 12px 4px; border-bottom: 1px solid var(--line);
     display: flex; gap: 12px; align-items: baseline; font-size: 13px; }
   .event .tag { flex-shrink: 0; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
@@ -45,17 +81,53 @@
   .tag.out_of_stock { background: rgba(248,113,113,.12); color: var(--red); }
   .tag.drop_signal { background: rgba(250,204,21,.15); color: var(--gold); }
   .event .when { color: var(--muted); font-size: 11px; margin-left: auto; flex-shrink: 0; }
+  .rt { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 7px;
+    border-radius: 4px; letter-spacing: .5px; text-transform: uppercase;
+    background: rgba(132,148,171,.15); color: var(--muted); }
+  .rt.bol { background: rgba(96,165,250,.15); color: var(--blue); }
+  .rt.mediamarkt { background: rgba(248,113,113,.15); color: var(--red); }
+  .rt.coolblue { background: rgba(251,146,60,.15); color: #fb923c; }
+  .rt.amazon { background: rgba(250,204,21,.12); color: var(--gold); }
   .empty { color: var(--muted); font-size: 13px; padding: 24px;
     border: 1px dashed var(--line); border-radius: 10px; text-align: center; }
 </style>
 </head>
 <body>
 <header>
-  <h1>BOL<span>TRACKER</span></h1>
-  <div class="meta"><b id="count">0</b> producten &middot; laatste check <b id="lastcheck">-</b> &middot; live via Supabase</div>
+  <div>
+    <h1>BOL<span>TRACKER</span></h1>
+    <div class="meta"><span class="live-dot" id="livedot"></span><b id="count">0</b> producten
+      &middot; laatste check <b id="lastcheck" data-ago="">-</b> &middot; <span id="source">live via Supabase</span></div>
+  </div>
+  <div class="controls">
+    <button class="btn" id="btn-notify" title="Browsermelding bij restock, drop of prijsdaling">&#128277; Meldingen uit</button>
+    <button class="btn" id="btn-sound" title="Geluidssignaal bij nieuwe gebeurtenis">&#128266; Geluid uit</button>
+    <button class="btn" id="btn-push" title="Telefoon-push via ntfy.sh">&#128241; Telefoon</button>
+    <button class="btn" id="btn-refresh" title="Nu verversen">&#8635; Ververs</button>
+  </div>
 </header>
+<div id="banner"><div class="inner" id="banner-text"></div></div>
 <main>
-  <section><h2>Watchlist</h2><div class="grid" id="products"></div></section>
+  <section>
+    <h2>Watchlist</h2>
+    <div class="toolbar">
+      <input id="search" type="search" placeholder="Zoek op naam of EAN&hellip;">
+      <button class="chip active" data-filter="all">Alle</button>
+      <button class="chip" data-filter="in">Op voorraad</button>
+      <button class="chip" data-filter="listed">Klaargezet</button>
+      <button class="chip" data-filter="out">Uitverkocht</button>
+      <select id="retailer" title="Winkel">
+        <option value="all">Alle winkels</option>
+      </select>
+      <select id="sort" title="Sorteren">
+        <option value="status">Status</option>
+        <option value="name">Naam A&rarr;Z</option>
+        <option value="price_asc">Prijs laag&rarr;hoog</option>
+        <option value="price_desc">Prijs hoog&rarr;laag</option>
+      </select>
+    </div>
+    <div class="grid" id="products"></div>
+  </section>
   <aside><h2>Gebeurtenissen</h2><div id="events"></div></aside>
 </main>
 <script>
@@ -65,7 +137,33 @@ const SUPABASE_ANON_KEY = "PLAK_HIER_JE_ANON_PUBLIC_KEY";
 
 const HEADERS = { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY };
 const LABELS = { restock: "RESTOCK", price_drop: "PRIJS", out_of_stock: "WEG", drop_signal: "DROP" };
+const NOTIFY_TYPES = ["restock", "price_drop", "drop_signal"];
+// Types waarbij je meteen kunt kopen -> koop-knop in melding/feed
+const BUYABLE_TYPES = ["restock", "price_drop"];
+const REFRESH_MS = 30000;      // normale poll
+const REFRESH_HOT_MS = 10000;  // sneller pollen zolang er "hot" items zijn
+const DEMO = SUPABASE_URL.includes("JOUWPROJECT") || SUPABASE_ANON_KEY.startsWith("PLAK_");
 
+function loadHot() {
+  try { return new Set(JSON.parse(localStorage.getItem("bt_hot") || "[]")); }
+  catch (_) { return new Set(); }
+}
+const state = {
+  products: [], events: [],
+  filter: "all", search: "", sort: "status", retailer: "all",
+  lastSeenTs: null, connected: true,
+  notify: localStorage.getItem("bt_notify") === "1",
+  sound: localStorage.getItem("bt_sound") === "1",
+  hot: loadHot(),                                     // set van EANs die "hot" zijn
+  pushTopic: localStorage.getItem("bt_push") || "",   // ntfy topic (leeg = uit)
+  pollTimer: null,
+};
+
+// ---------- helpers ----------
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
 function timeAgo(iso) {
   if (!iso) return "-";
   const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -74,59 +172,409 @@ function timeAgo(iso) {
   if (s < 86400) return Math.floor(s / 3600) + "u geleden";
   return Math.floor(s / 86400) + "d geleden";
 }
-function euro(v) { return v == null ? "-" : "\u20ac" + Number(v).toFixed(2).replace(".", ","); }
+function euro(v) { return v == null ? "-" : "€" + Number(v).toFixed(2).replace(".", ","); }
+// Ondersteunde winkels. `product` bouwt een directe productpagina-URL (als de
+// tracker een product_id kent), `search` is de fallback op EAN/zoekterm.
+// Rijen zonder retailer-veld tellen als bol (backwards-compatible).
+const RETAILERS = {
+  bol: {
+    label: "bol.com",
+    product: id => "https://www.bol.com/nl/nl/p/-/" + encodeURIComponent(id) + "/",
+    search: q => "https://www.bol.com/nl/nl/s/?searchtext=" + encodeURIComponent(q),
+  },
+  mediamarkt: {
+    label: "MediaMarkt",
+    search: q => "https://www.mediamarkt.nl/nl/search.html?query=" + encodeURIComponent(q),
+  },
+  coolblue: {
+    label: "Coolblue",
+    search: q => "https://www.coolblue.nl/zoeken?query=" + encodeURIComponent(q),
+  },
+  amazon: {
+    label: "Amazon",
+    search: q => "https://www.amazon.nl/s?k=" + encodeURIComponent(q),
+  },
+};
+function retailerOf(x) { return x.retailer || "bol"; }
+function retailerInfo(x) {
+  return RETAILERS[retailerOf(x)] ||
+    { label: retailerOf(x), search: q => "https://www.google.com/search?q=" + encodeURIComponent(q) };
+}
 function link(p) {
-  return p.product_id ? "https://www.bol.com/nl/nl/p/-/" + p.product_id + "/"
-                      : "https://www.bol.com/nl/nl/s/?searchtext=" + p.ean;
+  if (p.url) return p.url; // tracker kent de exacte productpagina
+  const r = retailerInfo(p);
+  if (p.product_id && r.product) return r.product(p.product_id);
+  return r.search(p.ean ?? p.name);
+}
+// Beste koop-link voor een event: zoek het bijbehorende product op (zelfde EAN
+// én winkel, voor product_id/url), val anders terug op de zoek-URL.
+function eventLink(e) {
+  const p = state.products.find(x => x.ean === e.ean && retailerOf(x) === retailerOf(e))
+    || { ean: e.ean, product_id: e.product_id, url: e.url, retailer: e.retailer };
+  return link(p);
+}
+function rtBadge(x) {
+  return '<span class="rt ' + esc(retailerOf(x)) + '">' + esc(retailerInfo(x).label) + '</span>';
+}
+function eventText(e) {
+  let txt = e.name;
+  if (e.type === "restock") txt += " voor " + euro(e.price);
+  if (e.type === "price_drop") txt += " " + euro(e.old_price) + " → " + euro(e.price);
+  if (e.type === "drop_signal") txt += " wordt klaargezet";
+  if (e.type === "out_of_stock") txt += " is uitverkocht";
+  return txt;
+}
+function setBanner(kind, msg) {
+  const el = document.getElementById("banner");
+  if (!kind) { el.style.display = "none"; el.className = ""; return; }
+  el.className = kind;
+  el.style.display = "block";
+  document.getElementById("banner-text").innerHTML = msg;
+}
+
+// ---------- prijsgeschiedenis (sparklines) ----------
+function priceHistory() {
+  const hist = {}; // key (winkel + ean/naam) -> [{ts, price}]
+  const src = state.events.slice().sort((a, b) => (a.ts < b.ts ? -1 : 1));
+  for (const e of src) {
+    if (e.price == null || (e.type !== "restock" && e.type !== "price_drop")) continue;
+    const key = retailerOf(e) + "|" + (e.ean ?? e.name);
+    (hist[key] = hist[key] || []).push({ ts: e.ts, price: Number(e.price) });
+  }
+  return hist;
+}
+function sparkline(points) {
+  if (points.length < 2) return "";
+  const w = 90, h = 24, pad = 2;
+  const prices = points.map(p => p.price);
+  const min = Math.min(...prices), max = Math.max(...prices), span = max - min || 1;
+  const coords = points.map((p, i) =>
+    (pad + i * (w - 2 * pad) / (points.length - 1)).toFixed(1) + "," +
+    (h - pad - (p.price - min) / span * (h - 2 * pad)).toFixed(1)).join(" ");
+  const first = prices[0], last = prices[prices.length - 1];
+  const trend = last < first ? "down" : (last > first ? "up" : "flat");
+  return '<svg class="spark ' + trend + '" width="' + w + '" height="' + h + '" ' +
+    'viewBox="0 0 ' + w + " " + h + '"><title>Prijsverloop: ' +
+    esc(euro(first) + " → " + euro(last)) + '</title><polyline points="' + coords + '"/></svg>';
+}
+
+// ---------- renderen ----------
+function visibleProducts() {
+  const q = state.search.trim().toLowerCase();
+  let list = state.products.filter(p => {
+    if (state.retailer !== "all" && retailerOf(p) !== state.retailer) return false;
+    if (state.filter === "in" && !p.in_stock) return false;
+    if (state.filter === "listed" && (p.in_stock || !p.listed)) return false;
+    if (state.filter === "out" && (p.in_stock || p.listed)) return false;
+    if (q && !String(p.name ?? "").toLowerCase().includes(q)
+          && !String(p.ean ?? "").toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const rank = p => p.in_stock ? 0 : (p.listed ? 1 : 2);
+  const byName = (a, b) => String(a.name).localeCompare(String(b.name), "nl");
+  const sorters = {
+    status: (a, b) => rank(a) - rank(b) || byName(a, b),
+    name: byName,
+    price_asc: (a, b) => (a.price ?? Infinity) - (b.price ?? Infinity) || byName(a, b),
+    price_desc: (a, b) => (b.price ?? -Infinity) - (a.price ?? -Infinity) || byName(a, b),
+  };
+  const sorter = sorters[state.sort] || sorters.status;
+  // Hot items altijd bovenaan, daarna de gekozen sortering
+  return list.sort((a, b) =>
+    (state.hot.has(b.ean) - state.hot.has(a.ean)) || sorter(a, b));
+}
+
+// Vul het winkelfilter met de winkels die echt in de data zitten
+function updateRetailerFilter() {
+  const sel = document.getElementById("retailer");
+  const kinds = [...new Set(state.products.map(retailerOf))].sort();
+  const want = kinds.join(",");
+  if (sel.dataset.kinds === want) return;
+  sel.dataset.kinds = want;
+  sel.innerHTML = '<option value="all">Alle winkels</option>' + kinds.map(k =>
+    '<option value="' + esc(k) + '">' + esc((RETAILERS[k] || { label: k }).label) + '</option>').join("");
+  if (!kinds.includes(state.retailer)) state.retailer = "all";
+  sel.value = state.retailer;
+}
+
+function render() {
+  updateRetailerFilter();
+  document.getElementById("count").textContent = state.products.length;
+  const checks = state.products.map(p => p.last_check).filter(Boolean).sort();
+  const lastEl = document.getElementById("lastcheck");
+  lastEl.dataset.ts = checks.length ? checks[checks.length - 1] : "";
+  lastEl.textContent = checks.length ? timeAgo(checks[checks.length - 1]) : "nog geen";
+
+  const hist = priceHistory();
+  const list = visibleProducts();
+  const grid = document.getElementById("products");
+  const frag = document.createDocumentFragment();
+  if (!list.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = state.products.length
+      ? "Geen producten gevonden voor dit filter."
+      : "Nog geen data. Start de tracker op de server.";
+    frag.appendChild(empty);
+  }
+  for (const p of list) {
+    const cls = p.in_stock ? "in" : (p.listed ? "listed" : "out");
+    const status = p.in_stock ? "op voorraad" : (p.listed ? "pagina klaargezet" : "uitverkocht");
+    const hkey = retailerOf(p) + "|";
+    const points = (hist[hkey + p.ean] || hist[hkey + p.name] || []).slice(-12);
+    if (p.price != null && p.last_check &&
+        (!points.length || points[points.length - 1].price !== Number(p.price))) {
+      points.push({ ts: p.last_check, price: Number(p.price) });
+    }
+    const isHot = state.hot.has(p.ean);
+    const shop = retailerInfo(p).label;
+    const buy = p.in_stock
+      ? '<a class="buy" href="' + esc(link(p)) + '" target="_blank" rel="noopener">Koop bij ' + esc(shop) + ' &rarr;</a>'
+      : '<a class="buy dim" href="' + esc(link(p)) + '" target="_blank" rel="noopener">Bekijk bij ' + esc(shop) + ' &rarr;</a>';
+    const el = document.createElement("div");
+    el.className = "card" + (isHot ? " hot" : "");
+    el.innerHTML =
+      '<div class="dot ' + cls + '"></div>' +
+      '<div><div class="name">' + esc(p.name) +
+        '<span class="star' + (isHot ? " on" : "") + '" data-hot="' + esc(p.ean) +
+        '" title="Markeer als hot: vaker checken en luider alarmeren">&#9733;</span></div>' +
+      '<div class="sub mono">' + rtBadge(p) + ' EAN ' + esc(p.ean) + ' &middot; ' + status + '</div>' +
+      '<div class="actions">' + buy + '</div></div>' +
+      '<div class="right">' + sparkline(points) +
+      '<div class="price mono">' + euro(p.price) +
+      '<small data-ago data-ts="' + esc(p.last_check ?? "") + '">' + timeAgo(p.last_check) + '</small></div></div>';
+    frag.appendChild(el);
+  }
+  grid.replaceChildren(frag);
+
+  const feed = document.getElementById("events");
+  const efrag = document.createDocumentFragment();
+  const evList = state.events.filter(e =>
+    state.retailer === "all" || retailerOf(e) === state.retailer);
+  if (!evList.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "Nog geen gebeurtenissen.";
+    efrag.appendChild(empty);
+  }
+  for (const e of evList) {
+    const el = document.createElement("div");
+    el.className = "event";
+    const buy = BUYABLE_TYPES.includes(e.type)
+      ? '<a class="buy" href="' + esc(eventLink(e)) + '" target="_blank" rel="noopener">Koop &rarr;</a>' : "";
+    el.innerHTML = '<span class="tag ' + esc(e.type) + '">' + esc(LABELS[e.type] || e.type) + '</span>' +
+      '<span>' + rtBadge(e) + ' ' + esc(eventText(e)) + buy + '</span>' +
+      '<span class="when" data-ago data-ts="' + esc(e.ts ?? "") + '">' + timeAgo(e.ts) + '</span>';
+    efrag.appendChild(el);
+  }
+  feed.replaceChildren(efrag);
+}
+
+// "x geleden"-labels lopen live mee, ook tussen refreshes in
+setInterval(() => {
+  document.querySelectorAll("[data-ago]").forEach(el => {
+    if (el.dataset.ts) el.textContent = timeAgo(el.dataset.ts);
+  });
+}, 10000);
+
+// ---------- meldingen ----------
+function beep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.frequency.value = 880;
+    g.gain.setValueAtTime(.15, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + .4);
+    o.start(); o.stop(ctx.currentTime + .4);
+  } catch (_) { /* audio niet beschikbaar */ }
+}
+// Telefoon-push via ntfy.sh: geen account nodig, installeer de ntfy-app en
+// abonneer op hetzelfde topic. We sturen titel, tekst en een "Koop"-actieknop mee.
+function pushPhone(e) {
+  if (!state.pushTopic) return;
+  const hot = state.hot.has(e.ean);
+  const headers = {
+    Title: "Boltracker — " + (LABELS[e.type] || e.type) + " bij " + retailerInfo(e).label,
+    Priority: hot ? "urgent" : "high",
+    Tags: e.type === "restock" ? "package" : (e.type === "price_drop" ? "chart_with_downwards_trend" : "eyes"),
+  };
+  if (BUYABLE_TYPES.includes(e.type)) headers.Actions = "view, Koop op bol, " + eventLink(e);
+  fetch("https://ntfy.sh/" + encodeURIComponent(state.pushTopic), {
+    method: "POST", headers, body: eventText(e),
+  }).catch(() => { /* push mislukt, niet blokkeren */ });
+}
+function maybeNotify(events) {
+  if (state.lastSeenTs === null) { // eerste load: niets melden, alleen markeren
+    state.lastSeenTs = events.length ? events[0].ts : "";
+    return;
+  }
+  const fresh = events.filter(e => e.ts && e.ts > state.lastSeenTs && NOTIFY_TYPES.includes(e.type));
+  if (events.length && events[0].ts > state.lastSeenTs) state.lastSeenTs = events[0].ts;
+  if (!fresh.length) return;
+  // Hot items eerst afhandelen zodat die als eerste binnenkomen
+  fresh.sort((a, b) => (state.hot.has(b.ean) - state.hot.has(a.ean)));
+  const anyHot = fresh.some(e => state.hot.has(e.ean));
+  if (state.sound) { beep(); if (anyHot) setTimeout(beep, 250); } // dubbele piep bij hot
+  if (state.notify && "Notification" in window && Notification.permission === "granted") {
+    for (const e of fresh.slice(0, 3)) {
+      const n = new Notification((state.hot.has(e.ean) ? "🔥 " : "") +
+        "Boltracker — " + (LABELS[e.type] || e.type) + " bij " + retailerInfo(e).label,
+        { body: eventText(e) });
+      if (BUYABLE_TYPES.includes(e.type)) n.onclick = () => window.open(eventLink(e), "_blank");
+    }
+  }
+  for (const e of fresh) pushPhone(e);
+}
+function updateButtons() {
+  const nb = document.getElementById("btn-notify"), sb = document.getElementById("btn-sound"),
+        pb = document.getElementById("btn-push");
+  nb.classList.toggle("on", state.notify);
+  nb.innerHTML = state.notify ? "&#128276; Meldingen aan" : "&#128277; Meldingen uit";
+  sb.classList.toggle("on", state.sound);
+  sb.innerHTML = state.sound ? "&#128266; Geluid aan" : "&#128263; Geluid uit";
+  pb.classList.toggle("on", !!state.pushTopic);
+  pb.innerHTML = state.pushTopic ? "&#128241; Telefoon aan" : "&#128241; Telefoon";
+}
+document.getElementById("btn-notify").addEventListener("click", async () => {
+  if (!state.notify) {
+    if (!("Notification" in window)) { setBanner("err", "Deze browser ondersteunt geen meldingen."); return; }
+    const perm = await Notification.requestPermission();
+    if (perm !== "granted") { setBanner("err", "Meldingen zijn geweigerd in de browser. Sta ze toe via de site-instellingen."); return; }
+    state.notify = true;
+  } else state.notify = false;
+  localStorage.setItem("bt_notify", state.notify ? "1" : "0");
+  updateButtons();
+});
+document.getElementById("btn-sound").addEventListener("click", () => {
+  state.sound = !state.sound;
+  localStorage.setItem("bt_sound", state.sound ? "1" : "0");
+  if (state.sound) beep();
+  updateButtons();
+});
+document.getElementById("btn-push").addEventListener("click", () => {
+  if (state.pushTopic) {
+    if (!confirm("Telefoon-push uitzetten voor topic \"" + state.pushTopic + "\"?")) return;
+    state.pushTopic = "";
+  } else {
+    const topic = prompt(
+      "Telefoon-push via ntfy.sh (gratis, geen account):\n" +
+      "1. Installeer de 'ntfy' app op je telefoon\n" +
+      "2. Abonneer daar op een zelfgekozen topicnaam\n" +
+      "3. Vul diezelfde naam hier in\n\n" +
+      "Kies iets uniek en geheim (iedereen die de naam kent, ontvangt je meldingen):",
+      "boltracker-" + Math.random().toString(36).slice(2, 8));
+    if (!topic) return;
+    state.pushTopic = topic.trim();
+    // teststootje zodat je meteen ziet of het werkt
+    fetch("https://ntfy.sh/" + encodeURIComponent(state.pushTopic), {
+      method: "POST", headers: { Title: "Boltracker", Tags: "white_check_mark" },
+      body: "Telefoon-push staat aan. Je krijgt nu meldingen bij restocks en prijsdalingen.",
+    }).catch(() => {});
+  }
+  localStorage.setItem("bt_push", state.pushTopic);
+  updateButtons();
+});
+
+// ---------- filters / zoeken / sorteren ----------
+document.getElementById("search").addEventListener("input", e => {
+  state.search = e.target.value; render();
+});
+document.getElementById("sort").addEventListener("change", e => {
+  state.sort = e.target.value; render();
+});
+document.getElementById("retailer").addEventListener("change", e => {
+  state.retailer = e.target.value; render();
+});
+document.querySelectorAll(".chip").forEach(chip => chip.addEventListener("click", () => {
+  document.querySelectorAll(".chip").forEach(c => c.classList.remove("active"));
+  chip.classList.add("active");
+  state.filter = chip.dataset.filter;
+  render();
+}));
+document.getElementById("btn-refresh").addEventListener("click", refresh);
+
+// Ster aan/uit om een item "hot" te maken (vaker checken + luider alarm)
+document.getElementById("products").addEventListener("click", e => {
+  const star = e.target.closest(".star");
+  if (!star) return;
+  const ean = star.dataset.hot;
+  if (state.hot.has(ean)) state.hot.delete(ean); else state.hot.add(ean);
+  localStorage.setItem("bt_hot", JSON.stringify([...state.hot]));
+  render();
+  schedulePoll();
+});
+
+// Poll sneller zolang er hot items zijn, anders normaal
+function schedulePoll() {
+  if (state.pollTimer) clearInterval(state.pollTimer);
+  const ms = state.hot.size ? REFRESH_HOT_MS : REFRESH_MS;
+  state.pollTimer = setInterval(refresh, ms);
+}
+
+// ---------- data ophalen ----------
+function setConnected(ok, msg) {
+  state.connected = ok;
+  document.getElementById("livedot").classList.toggle("err", !ok);
+  if (ok) { if (!DEMO) setBanner(null); }
+  else setBanner("err", msg);
 }
 
 async function refresh() {
-  const [sr, er] = await Promise.all([
-    fetch(SUPABASE_URL + "/rest/v1/tracker_state?select=*&order=name", { headers: HEADERS }),
-    fetch(SUPABASE_URL + "/rest/v1/tracker_events?select=*&order=ts.desc&limit=50", { headers: HEADERS }),
-  ]);
-  const products = await sr.json();
-  const events = await er.json();
-
-  document.getElementById("count").textContent = products.length;
-  const checks = products.map(p => p.last_check).filter(Boolean).sort();
-  document.getElementById("lastcheck").textContent =
-    checks.length ? timeAgo(checks[checks.length - 1]) : "nog geen";
-
-  const grid = document.getElementById("products");
-  grid.innerHTML = products.length ? "" :
-    '<div class="empty">Nog geen data. Start de tracker op de server.</div>';
-  for (const p of products) {
-    const cls = p.in_stock ? "in" : (p.listed ? "listed" : "out");
-    const status = p.in_stock ? "op voorraad" : (p.listed ? "pagina klaargezet" : "uitverkocht");
-    const el = document.createElement("div");
-    el.className = "card";
-    el.innerHTML =
-      '<div class="dot ' + cls + '"></div>' +
-      '<div><div class="name">' + p.name + '</div>' +
-      '<div class="sub mono">EAN ' + p.ean + ' &middot; ' + status + '</div>' +
-      '<a href="' + link(p) + '" target="_blank">bekijk op bol &rarr;</a></div>' +
-      '<div class="price mono">' + euro(p.price) + '<small>' + timeAgo(p.last_check) + '</small></div>';
-    grid.appendChild(el);
-  }
-
-  const feed = document.getElementById("events");
-  feed.innerHTML = events.length ? "" :
-    '<div class="empty">Nog geen gebeurtenissen.</div>';
-  for (const e of events) {
-    let txt = e.name;
-    if (e.type === "restock") txt += " voor " + euro(e.price);
-    if (e.type === "price_drop") txt += " " + euro(e.old_price) + " \u2192 " + euro(e.price);
-    if (e.type === "drop_signal") txt += " wordt klaargezet";
-    const el = document.createElement("div");
-    el.className = "event";
-    el.innerHTML = '<span class="tag ' + e.type + '">' + (LABELS[e.type] || e.type) + '</span>' +
-      '<span>' + txt + '</span><span class="when">' + timeAgo(e.ts) + '</span>';
-    feed.appendChild(el);
+  if (DEMO) { loadDemo(); return; }
+  try {
+    const [sr, er] = await Promise.all([
+      fetch(SUPABASE_URL + "/rest/v1/tracker_state?select=*&order=name", { headers: HEADERS }),
+      fetch(SUPABASE_URL + "/rest/v1/tracker_events?select=*&order=ts.desc&limit=100", { headers: HEADERS }),
+    ]);
+    if (!sr.ok) throw new Error("tracker_state HTTP " + sr.status);
+    if (!er.ok) throw new Error("tracker_events HTTP " + er.status);
+    const products = await sr.json();
+    const events = await er.json();
+    if (!Array.isArray(products) || !Array.isArray(events))
+      throw new Error("onverwacht antwoord van Supabase");
+    state.products = products;
+    state.events = events;
+    setConnected(true);
+    render();
+    maybeNotify(events);
+  } catch (err) {
+    setConnected(false, "Kan geen verbinding maken met Supabase (" + esc(err.message) +
+      "). Nieuwe poging over " + REFRESH_MS / 1000 + "s.");
   }
 }
+
+// ---------- demo-modus (zolang de Supabase keys niet zijn ingevuld) ----------
+function loadDemo() {
+  const m = min => new Date(Date.now() - min * 60000).toISOString();
+  state.products = [
+    { name: "Pokémon TCG Scarlet & Violet 151 Booster Bundle", ean: "0820650858079", product_id: "9300000135741181", price: 54.99, in_stock: true, listed: true, last_check: m(1), retailer: "bol" },
+    { name: "Labubu The Monsters — Big Into Energy", ean: "6931571002903", product_id: null, price: 27.95, in_stock: false, listed: true, last_check: m(2), retailer: "bol" },
+    { name: "LEGO Icons Botanical Orchidee 10311", ean: "5702017152738", product_id: "9300000105713772", price: 44.99, in_stock: true, listed: true, last_check: m(1), retailer: "bol" },
+    { name: "PlayStation 5 DualSense Controller", ean: "0711719575856", price: 64.99, in_stock: true, listed: true, last_check: m(2), retailer: "mediamarkt" },
+    { name: "Nintendo Switch 2 Console", ean: "0045496453589", price: 449.99, in_stock: false, listed: true, last_check: m(1), retailer: "mediamarkt" },
+    { name: "PlayStation Portal Remote Player", ean: "0711719580782", price: null, in_stock: false, listed: false, last_check: m(4), retailer: "coolblue" },
+  ];
+  state.events = [
+    { type: "restock", name: "Pokémon TCG Scarlet & Violet 151 Booster Bundle", price: 54.99, ean: "0820650858079", ts: m(6), retailer: "bol" },
+    { type: "price_drop", name: "PlayStation 5 DualSense Controller", old_price: 74.99, price: 64.99, ean: "0711719575856", ts: m(22), retailer: "mediamarkt" },
+    { type: "price_drop", name: "LEGO Icons Botanical Orchidee 10311", old_price: 49.99, price: 44.99, ean: "5702017152738", ts: m(38), retailer: "bol" },
+    { type: "drop_signal", name: "Nintendo Switch 2 Console", ean: "0045496453589", ts: m(60), retailer: "mediamarkt" },
+    { type: "drop_signal", name: "Labubu The Monsters — Big Into Energy", ean: "6931571002903", ts: m(95), retailer: "bol" },
+    { type: "out_of_stock", name: "PlayStation Portal Remote Player", ean: "0711719580782", ts: m(180), retailer: "coolblue" },
+    { type: "price_drop", name: "Pokémon TCG Scarlet & Violet 151 Booster Bundle", old_price: 59.99, price: 54.99, ean: "0820650858079", ts: m(300), retailer: "bol" },
+    { type: "restock", name: "LEGO Icons Botanical Orchidee 10311", price: 49.99, ean: "5702017152738", ts: m(1500), retailer: "bol" },
+  ];
+  document.getElementById("source").textContent = "demo-modus";
+  setBanner("warn", "<b>Demo-modus:</b> vul <span class=\"mono\">SUPABASE_URL</span> en " +
+    "<span class=\"mono\">SUPABASE_ANON_KEY</span> in onderaan dit bestand om live data te zien.");
+  render();
+  maybeNotify(state.events);
+}
+
+updateButtons();
 refresh();
-setInterval(refresh, 30000);
+schedulePoll();
 </script>
 </body>
 </html>
