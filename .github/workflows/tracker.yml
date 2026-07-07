@@ -1,0 +1,34 @@
+name: boltracker
+
+on:
+  schedule:
+    # Elke 10 minuten. GitHub hanteert ~5 min als minimum en kan onder drukte
+    # iets later draaien; voor drops is dat meestal snel genoeg.
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}   # laat je 'm ook handmatig starten via de Actions-tab
+
+# Voorkomt dat twee runs elkaar overlappen als een run uitloopt.
+concurrency:
+  group: boltracker
+  cancel-in-progress: false
+
+jobs:
+  track:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Dependencies installeren
+        run: pip install -r tracker/requirements.txt
+
+      - name: Tracker draaien
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python tracker/tracker.py
