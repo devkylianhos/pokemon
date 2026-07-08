@@ -1,0 +1,6 @@
+[
+  { "domain": "evocollects.nl", "platform": "shopify", "retailer": "evocollects", "enabled": true },
+  { "domain": "pokemonbay.nl", "platform": "woo", "retailer": "pokemonbay", "enabled": true },
+  { "domain": "davidptcg.nl", "platform": "woo", "retailer": "davidptcg", "enabled": true },
+  { "domain": "starcardstcg.nl", "platform": "woo", "retailer": "starcardstcg", "enabled": true }
+]

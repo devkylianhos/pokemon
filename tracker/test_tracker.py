@@ -14,6 +14,7 @@ import requests
 sys.path.insert(0, str(Path(__file__).parent))
 
 import bol_api
+import shops
 import tracker
 from mock_services import MockServer
 
@@ -265,7 +266,9 @@ WATCHLIST = [
 
 
 def run_tracker(server, watchlist_path):
-    env = {**server.env(), "WATCHLIST": str(watchlist_path), "PATH": "/usr/bin:/bin"}
+    # SHOPS naar een niet-bestaand pad: e2e-tests mogen geen echte winkels ophalen.
+    env = {**server.env(), "WATCHLIST": str(watchlist_path),
+           "SHOPS": str(watchlist_path) + ".no-shops", "PATH": "/usr/bin:/bin"}
     return subprocess.run(
         [sys.executable, str(TRACKER_PY)],
         env=env, capture_output=True, text=True, timeout=60,
@@ -332,6 +335,56 @@ def test_e2e_foute_credentials_stopt_met_duidelijke_fout(watchlist_file):
         r = run_tracker(server, watchlist_file)
         assert r.returncode != 0
         assert "authenticatie" in (r.stdout + r.stderr).lower()
+
+
+# --------------------------------------------------------------------------- #
+# Unit: shops.py (Shopify / Woo parsing + filter)
+# --------------------------------------------------------------------------- #
+class ShopResp:
+    def __init__(self, payload, ct="application/json", status=200):
+        self._p, self.status_code, self.headers = payload, status, {"content-type": ct}
+
+    def json(self):
+        return self._p
+
+
+class ShopSession:
+    def __init__(self, payload):
+        self.payload = payload
+
+    def get(self, url, params=None, timeout=None):
+        # kleine payload (<limit) -> fetcher stopt na pagina 1
+        return ShopResp(self.payload)
+
+
+def test_shops_shopify_parse():
+    payload = {"products": [{"title": "Pokémon Surging Sparks Booster Box",
+                             "handle": "surging-sparks-bb",
+                             "variants": [{"available": True, "price": "199.99"}]}]}
+    out = shops.fetch_shopify("https://x.nl", "evo", ShopSession(payload))
+    assert len(out) == 1
+    p = out[0]
+    assert p["name"] == "Pokémon Surging Sparks Booster Box"
+    assert p["price"] == 199.99 and p["in_stock"] is True and p["retailer"] == "evo"
+    assert p["url"].endswith("/products/surging-sparks-bb")
+
+
+def test_shops_woo_parse_prices_in_cents_and_html():
+    payload = [{"id": 42, "name": "Pok&#233;mon Destined Rivals &#8211; Booster Box",
+                "is_in_stock": False, "prices": {"price": "12975", "currency_minor_unit": 2},
+                "permalink": "https://x.nl/p/42"}]
+    out = shops.fetch_woo("https://x.nl", "bay", ShopSession(payload))
+    assert len(out) == 1
+    p = out[0]
+    assert p["price"] == 129.75 and p["in_stock"] is False and p["ean"] == "42"
+    assert p["name"] == "Pokémon Destined Rivals – Booster Box"   # entities gedecodeerd
+
+
+def test_shops_pokemon_sealed_filter():
+    assert shops.is_pokemon_sealed("Pokémon Surging Sparks Booster Box")
+    assert shops.is_pokemon_sealed("Mega Evolution Elite Trainer Box")
+    assert not shops.is_pokemon_sealed("Pokémon Card Sleeves 65 stuks")   # accessoire
+    assert not shops.is_pokemon_sealed("Charizard V single kaart")        # single
 
 
 def test_discord_payload_bol_drop():
@@ -454,7 +507,8 @@ def test_e2e_state_paginatie_over_meerdere_paginas(watchlist_file):
         server.mock.scenario["222"] = {"listed": True, "in_stock": True, "price": 64.99}
         wl = watchlist_file.parent / "wl2.json"
         wl.write_text(json.dumps(WATCHLIST + [{"name": "Seed 3", "ean": "seed3", "retailer": "bol"}]))
-        env = {**server.env(), "WATCHLIST": str(wl), "STATE_PAGE_SIZE": "2", "PATH": "/usr/bin:/bin"}
+        env = {**server.env(), "WATCHLIST": str(wl), "STATE_PAGE_SIZE": "2",
+               "SHOPS": str(wl) + ".no-shops", "PATH": "/usr/bin:/bin"}
         r = subprocess.run([sys.executable, str(TRACKER_PY)], env=env,
                            capture_output=True, text=True, timeout=60)
         assert r.returncode == 0, r.stderr

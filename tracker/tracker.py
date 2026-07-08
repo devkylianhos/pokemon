@@ -23,8 +23,10 @@ import requests
 
 try:
     from bol_api import BolRetailerClient, BolApiError, BolAuthError
+    import shops
 except ImportError:  # als module (python -m tracker.tracker)
     from tracker.bol_api import BolRetailerClient, BolApiError, BolAuthError
+    from tracker import shops
 
 # --------------------------------------------------------------------------- #
 # Configuratie
@@ -32,6 +34,7 @@ except ImportError:  # als module (python -m tracker.tracker)
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 WATCHLIST_PATH = Path(os.environ.get("WATCHLIST", Path(__file__).with_name("watchlist.json")))
+SHOPS_PATH = Path(os.environ.get("SHOPS", Path(__file__).with_name("shops.json")))
 
 # Officiële bol Retailer API (aanbevolen). Zonder credentials valt de tracker
 # terug op best-effort HTML-scraping, die bij bol vaak "onbekend" oplevert.
@@ -451,6 +454,38 @@ def main():
         extra = "" if known else " (onbekend, laatst bekende behouden)"
         log(f"  · {item['name']}: {status}, prijs {price_val}{extra}")
         time.sleep(REQUEST_DELAY)
+
+    # ---- Extra winkels via publieke Shopify/Woo product-API's ----
+    # Hele catalogus per shop ophalen, filteren op Pokémon-sealed en door dezelfde
+    # diff/events-machinerie halen (sleutel = shop + product-handle i.p.v. EAN).
+    if SHOPS_PATH.exists():
+        try:
+            shop_cfg = json.loads(SHOPS_PATH.read_text())
+        except (json.JSONDecodeError, ValueError):
+            shop_cfg = []
+        for shop in shop_cfg:
+            if not isinstance(shop, dict) or not shop.get("enabled", True) or not shop.get("domain"):
+                continue
+            try:
+                products = shops.fetch_shop(shop, session)
+            except requests.RequestException as e:
+                log(f"  ! shop {shop.get('domain')}: netwerkfout ({e}); overgeslagen")
+                continue
+            log(f"  · winkel {shop.get('retailer', shop['domain'])}: {len(products)} sealed-producten")
+            for cur in products:
+                ts_s = now_iso()
+                prev = prev_state.get((cur["retailer"], cur["ean"]))
+                events = diff_events(prev, cur, cur, ts_s)  # cur dient als cur én item
+                for ev in events:
+                    log(f"    → {ev['type'].upper()}: {cur['name'][:40]} ({cur['retailer']})")
+                event_rows.extend(events)
+                state_rows.append({
+                    "retailer": cur["retailer"], "ean": cur["ean"], "name": cur["name"],
+                    "product_id": None, "url": cur.get("url"),
+                    "price": cur["price"], "in_stock": bool(cur["in_stock"]),
+                    "listed": cur["listed"], "last_check": ts_s,
+                })
+            time.sleep(REQUEST_DELAY)
 
     # Volgorde is bewust: eerst events wegschrijven, daarna pas de state
     # bijwerken. Zou de state eerst geschreven worden en het event-insert
