@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PocketPop — Database</title>
+<meta name="description" content="Doorzoekbare database van alle Pokémon TCG-sets: serie, releasedatum en aantal kaarten.">
+<link rel="stylesheet" href="pocketpop.css">
+<style>
+  .wrap { max-width: var(--page-max); margin: 0 auto; padding: 0 24px 64px; }
+  nav { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; flex-wrap: wrap; gap: 10px; }
+  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .brand .wordmark { font-size: 24px; }
+  .nav-links { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .nav-links a:not(.btn) { font-family: var(--font-body); font-size: 14px; font-weight: 700;
+    color: var(--pp-ink-soft); text-decoration: none; padding: 8px 12px; border-radius: var(--radius-md); }
+  .nav-links a.here, .nav-links a:not(.btn):hover { color: var(--pp-ink); background: var(--surface-well); }
+  header.head { padding: 20px 0 8px; }
+  header.head h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(30px, 5vw, 48px);
+    line-height: 1.05; letter-spacing: var(--tracking-display); margin: 10px 0 8px; }
+  .head p { color: var(--text-secondary); max-width: 560px; }
+  .head .count-line { font-family: var(--font-pixel-label); font-size: 10px; letter-spacing: var(--tracking-label);
+    color: var(--text-muted); margin-top: 6px; }
+  .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 18px 0; }
+  .toolbar .input { flex: 1 1 220px; min-width: 160px; }
+  .toolbar .select { width: 190px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 820px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 520px) { .grid { grid-template-columns: 1fr; } }
+  .setcard { background: var(--surface-card); border: var(--border-thick); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sticker-sm); padding: 16px; transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out); }
+  .setcard:hover { transform: translate(-2px,-2px); box-shadow: var(--shadow-sticker); }
+  .setcard .series { font-family: var(--font-pixel-label); font-size: 8px; letter-spacing: var(--tracking-label);
+    text-transform: uppercase; color: var(--pp-teal-deep); }
+  .setcard .name { font-family: var(--font-display); font-size: 21px; line-height: 1.05; margin: 6px 0 10px; }
+  .setcard .meta { display: flex; justify-content: space-between; align-items: baseline; }
+  .setcard .date { font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); }
+  .setcard .cards { font-family: var(--font-mono); font-size: 13px; font-weight: 700; }
+  .setcard .cards small { color: var(--text-muted); font-weight: 400; }
+  .empty { text-align: center; padding: 40px; font-family: var(--font-pixel-label); font-size: 10px;
+    letter-spacing: var(--tracking-label); color: var(--text-muted); }
+  footer { border-top: var(--border-mid); padding: 24px 0; margin-top: 40px; color: var(--text-muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <a class="brand" href="index.html">
+      <span class="blip-badge"><img src="assets/blip-white.svg" alt="" width="22"></span>
+      <span class="wordmark">POCKET<b>POP</b></span>
+    </a>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="releases.html">Releases</a>
+      <a class="here" href="database.html">Database</a>
+    </div>
+  </nav>
+
+  <header class="head">
+    <div class="kicker" style="color:var(--pp-teal-deep);">// Database</div>
+    <h1>Alle Pokémon TCG-sets</h1>
+    <p>Doorzoek en filter alle sets op serie, datum en grootte. Feitelijke set-data uit <span class="mono">pokemon-tcg-data</span> — geen kaart-art.</p>
+    <div class="count-line"><span id="count">0</span> van <span id="total">0</span> sets</div>
+  </header>
+
+  <div class="toolbar">
+    <label class="input" style="flex:1 1 220px;"><span class="input__icon">⌕</span><input id="search" type="search" placeholder="Zoek set of serie…"></label>
+    <label class="select" style="width:200px;"><select id="series"><option value="">Alle series</option></select><span class="select__arrow">▼</span></label>
+    <label class="select" style="width:190px;"><select id="sort">
+      <option value="date_desc">Nieuwste eerst</option>
+      <option value="date_asc">Oudste eerst</option>
+      <option value="name">Naam A→Z</option>
+      <option value="size_desc">Grootste set</option>
+    </select><span class="select__arrow">▼</span></label>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" style="display:none;">GEEN SETS GEVONDEN…</div>
+
+  <footer>
+    Bron: pokemon-tcg-data (feitelijke set-data). Pokémon en set-namen zijn eigendom van The Pokémon Company; dit is een fan-project.
+  </footer>
+</div>
+
+<script>
+  var SETS = [], state = { q: "", series: "", sort: "date_desc" };
+  var gridEl = document.getElementById("grid"), emptyEl = document.getElementById("empty");
+
+  function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+
+  function render() {
+    var q = state.q.trim().toLowerCase();
+    var list = SETS.filter(function(s){
+      if (state.series && s.series !== state.series) return false;
+      if (q && String(s.name).toLowerCase().indexOf(q) < 0 && String(s.series||"").toLowerCase().indexOf(q) < 0) return false;
+      return true;
+    });
+    var byName = function(a,b){ return String(a.name).localeCompare(String(b.name),"nl"); };
+    var sorters = {
+      date_desc: function(a,b){ return (b.releaseDate||"").localeCompare(a.releaseDate||""); },
+      date_asc:  function(a,b){ return (a.releaseDate||"").localeCompare(b.releaseDate||""); },
+      name: byName,
+      size_desc: function(a,b){ return (b.total||0)-(a.total||0) || byName(a,b); },
+    };
+    list.sort(sorters[state.sort] || sorters.date_desc);
+
+    document.getElementById("count").textContent = list.length;
+    emptyEl.style.display = list.length ? "none" : "block";
+    gridEl.innerHTML = list.map(function(s){
+      return '<div class="setcard">'
+        + '<div class="series">'+esc(s.series||"—")+'</div>'
+        + '<div class="name">'+esc(s.name)+'</div>'
+        + '<div class="meta"><span class="date">'+esc((s.releaseDate||"?").replace(/\//g,"-"))+'</span>'
+        + '<span class="cards">'+ (s.total!=null?s.total:'?') +'<small> kaarten</small></span></div>'
+        + '</div>';
+    }).join("");
+  }
+
+  document.getElementById("search").addEventListener("input", function(e){ state.q = e.target.value; render(); });
+  document.getElementById("series").addEventListener("change", function(e){ state.series = e.target.value; render(); });
+  document.getElementById("sort").addEventListener("change", function(e){ state.sort = e.target.value; render(); });
+
+  fetch("tcg-sets.json").then(function(r){ return r.json(); }).then(function(data){
+    SETS = data;
+    document.getElementById("total").textContent = data.length;
+    var series = [...new Set(data.map(function(s){ return s.series; }).filter(Boolean))].sort();
+    document.getElementById("series").innerHTML = '<option value="">Alle series</option>'
+      + series.map(function(x){ return '<option value="'+esc(x)+'">'+esc(x)+'</option>'; }).join("");
+    render();
+  }).catch(function(){ emptyEl.textContent = "KON DATA NIET LADEN"; emptyEl.style.display = "block"; });
+</script>
+</body>
+</html>

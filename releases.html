@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PocketPop — Releases</title>
+<meta name="description" content="Pokémon TCG release-kalender: alle sets met releasedatum en aantal kaarten.">
+<link rel="stylesheet" href="pocketpop.css">
+<style>
+  .wrap { max-width: var(--page-max); margin: 0 auto; padding: 0 24px 64px; }
+  nav { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; flex-wrap: wrap; gap: 10px; }
+  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .brand .wordmark { font-size: 24px; }
+  .nav-links { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .nav-links a:not(.btn) { font-family: var(--font-body); font-size: 14px; font-weight: 700;
+    color: var(--pp-ink-soft); text-decoration: none; padding: 8px 12px; border-radius: var(--radius-md); }
+  .nav-links a.here, .nav-links a:not(.btn):hover { color: var(--pp-ink); background: var(--surface-well); }
+  header.head { padding: 20px 0 8px; }
+  header.head h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(30px, 5vw, 48px);
+    line-height: 1.05; letter-spacing: var(--tracking-display); margin: 10px 0 8px; }
+  .head p { color: var(--text-secondary); max-width: 560px; }
+  .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 18px 0 6px; }
+  .toolbar .input { flex: 1 1 220px; min-width: 160px; }
+  .toolbar .select { width: 190px; }
+  .yeargroup { margin-top: 32px; }
+  .yeargroup h2 { font-family: var(--font-display); font-size: 30px; font-weight: 400; margin: 0 0 4px;
+    display: flex; align-items: baseline; gap: 10px; }
+  .yeargroup h2 small { font-family: var(--font-pixel-label); font-size: 10px; letter-spacing: var(--tracking-label);
+    color: var(--text-muted); }
+  .timeline { border-left: var(--border-mid); margin-left: 8px; padding-left: 0; margin-top: 14px; }
+  .setrow { position: relative; display: grid; grid-template-columns: 92px 1fr auto; gap: 16px; align-items: center;
+    background: var(--surface-card); border: var(--border-thick); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sticker-sm); padding: 14px 16px; margin: 0 0 12px 22px; }
+  .setrow::before { content: ""; position: absolute; left: -30px; top: 50%; transform: translateY(-50%);
+    width: 14px; height: 14px; border-radius: 50%; background: var(--pp-amber); border: 2px solid var(--pp-ink); }
+  .setrow.latest::before { background: var(--pp-lime); box-shadow: var(--shadow-sticker-sm); }
+  .setrow .date { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--pp-teal-deep); }
+  .setrow .date small { display: block; color: var(--text-muted); font-weight: 400; }
+  .setrow .name { font-family: var(--font-display); font-size: 22px; line-height: 1.05; }
+  .setrow .series { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .setrow .count { text-align: right; font-family: var(--font-mono); font-size: 13px; font-weight: 700; }
+  .setrow .count small { display: block; font-size: 10px; color: var(--text-muted); font-weight: 400; }
+  .empty { text-align: center; padding: 40px; font-family: var(--font-pixel-label); font-size: 10px;
+    letter-spacing: var(--tracking-label); color: var(--text-muted); }
+  footer { border-top: var(--border-mid); padding: 24px 0; margin-top: 40px; color: var(--text-muted); font-size: 12px; }
+  @media (max-width: 620px) { .setrow { grid-template-columns: 76px 1fr; } .setrow .count { grid-column: 2; text-align: left; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <a class="brand" href="index.html">
+      <span class="blip-badge"><img src="assets/blip-white.svg" alt="" width="22"></span>
+      <span class="wordmark">POCKET<b>POP</b></span>
+    </a>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a class="here" href="releases.html">Releases</a>
+      <a href="database.html">Database</a>
+    </div>
+  </nav>
+
+  <header class="head">
+    <div class="kicker" style="color:var(--pp-teal-deep);">// Release-kalender</div>
+    <h1>Pokémon TCG releases</h1>
+    <p>Alle sets met releasedatum en aantal kaarten — zo weet je wat eraan komt en welke producten je op je watchlist wil zetten. Data uit de openbare <span class="mono">pokemon-tcg-data</span>-dataset (feiten; geen kaart-art).</p>
+  </header>
+
+  <div class="toolbar">
+    <label class="input" style="flex:1 1 220px;"><span class="input__icon">⌕</span><input id="search" type="search" placeholder="Zoek set of serie…"></label>
+    <label class="select" style="width:200px;"><select id="series"><option value="">Alle series</option></select><span class="select__arrow">▼</span></label>
+  </div>
+
+  <div id="list"></div>
+  <div class="empty" id="empty" style="display:none;">GEEN SETS GEVONDEN…</div>
+
+  <footer>
+    Bron: pokemon-tcg-data (feitelijke set-data). Pokémon en set-namen zijn eigendom van The Pokémon Company; dit is een fan-project.
+  </footer>
+</div>
+
+<script>
+  var SETS = [], state = { q: "", series: "" };
+  var listEl = document.getElementById("list"), emptyEl = document.getElementById("empty");
+
+  function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+  var MONTHS = ["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"];
+  function fmt(d){ // "2026/05/22" -> {day, mon, year}
+    var p = (d||"").split("/"); if (p.length !== 3) return { day:"?", mon:"", year:d||"?" };
+    return { day: p[2], mon: MONTHS[parseInt(p[1],10)-1] || "", year: p[0] };
+  }
+
+  function render() {
+    var q = state.q.trim().toLowerCase();
+    var list = SETS.filter(function(s){
+      if (state.series && s.series !== state.series) return false;
+      if (q && String(s.name).toLowerCase().indexOf(q) < 0 && String(s.series||"").toLowerCase().indexOf(q) < 0) return false;
+      return true;
+    });
+    emptyEl.style.display = list.length ? "none" : "block";
+    // groepeer op jaar
+    var groups = {}, order = [];
+    list.forEach(function(s){
+      var y = fmt(s.releaseDate).year;
+      if (!groups[y]) { groups[y] = []; order.push(y); }
+      groups[y].push(s);
+    });
+    var latestId = SETS.length ? SETS[0].id : null;
+    listEl.innerHTML = order.map(function(y){
+      var rows = groups[y].map(function(s){
+        var f = fmt(s.releaseDate);
+        var latest = s.id === latestId ? " latest" : "";
+        return '<div class="setrow'+latest+'">'
+          + '<div class="date">'+esc(f.day)+' '+esc(f.mon)+'<small>'+esc(f.year)+'</small></div>'
+          + '<div><div class="name">'+esc(s.name)+(latest?' <span class="badge badge--lime">NIEUWSTE</span>':'')+'</div>'
+          + '<div class="series">'+esc(s.series||"—")+'</div></div>'
+          + '<div class="count">'+ (s.total!=null?s.total:'?') +'<small>kaarten</small></div>'
+          + '</div>';
+      }).join("");
+      return '<div class="yeargroup"><h2>'+esc(y)+' <small>'+groups[y].length+' sets</small></h2><div class="timeline">'+rows+'</div></div>';
+    }).join("");
+  }
+
+  document.getElementById("search").addEventListener("input", function(e){ state.q = e.target.value; render(); });
+  document.getElementById("series").addEventListener("change", function(e){ state.series = e.target.value; render(); });
+
+  fetch("tcg-sets.json").then(function(r){ return r.json(); }).then(function(data){
+    SETS = data;
+    var series = [...new Set(data.map(function(s){ return s.series; }).filter(Boolean))].sort();
+    document.getElementById("series").innerHTML = '<option value="">Alle series</option>'
+      + series.map(function(x){ return '<option value="'+esc(x)+'">'+esc(x)+'</option>'; }).join("");
+    render();
+  }).catch(function(){ emptyEl.textContent = "KON DATA NIET LADEN"; emptyEl.style.display = "block"; });
+</script>
+</body>
+</html>
