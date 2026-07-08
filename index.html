@@ -3,188 +3,269 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PocketPop — Dashboard</title>
-<meta name="description" content="PocketPop trainer-dashboard: stats, collectie-voortgang en activiteit in de Sunny Pixel Pop-stijl.">
+<title>PocketPop — Wees er vóór de scalpers</title>
+<meta name="description" content="PocketPop monitort webshops 24/7 op restocks en prijsdalingen van TCG en verzamelitems. Directe melding met koop-link — jij bestelt als eerste.">
 <link rel="stylesheet" href="pocketpop.css">
 <style>
-  .layout { display: flex; min-height: 100vh; }
-  .sidebar { width: 220px; flex: 0 0 auto; background: var(--surface-card);
-    border-right: var(--border-thick); padding: 20px 14px; display: flex; flex-direction: column; gap: 6px; }
-  .sidebar__logo { display: flex; align-items: center; gap: 8px; padding: 0 8px 18px; }
-  .sidebar__logo .wordmark { font-size: 22px; }
-  .navitem { display: flex; align-items: center; gap: 10px; text-align: left; text-decoration: none;
-    font-family: var(--font-body); font-size: 14px; font-weight: 700;
-    padding: 10px 12px; border-radius: var(--radius-md); cursor: pointer;
-    background: transparent; color: var(--pp-ink-soft); border: 2px solid transparent; }
-  .navitem:hover { color: var(--pp-ink); }
-  .navitem__icon { width: 18px; text-align: center; }
-  .navitem--active { background: var(--pp-ink); color: var(--pp-paper); border: var(--border-mid);
-    box-shadow: var(--shadow-sticker-sm); }
-  .navitem--active:hover { color: var(--pp-paper); }
-  .trainer { margin-top: auto; background: var(--surface-well); border: var(--border-mid);
-    border-radius: var(--radius-md); padding: 12px; }
-  .main { flex: 1; padding: 26px 30px; display: grid; gap: 20px; align-content: start; }
-  .main__head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
-  .main__title { font-family: var(--font-display); font-size: var(--display-lg); font-weight: 400; line-height: 1; margin: 0; }
-  .statrow { display: flex; gap: 16px; flex-wrap: wrap; }
-  .statcard { flex: 1; min-width: 150px; }
-  .statcard__value { font-family: var(--font-display); font-size: 40px; line-height: 1; }
-  .split { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; align-items: start; }
-  .activity-row { display: flex; align-items: center; gap: 10px; }
+  .wrap { max-width: var(--page-max); margin: 0 auto; padding: 0 24px; }
+  /* nav */
+  nav { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; }
+  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .brand .wordmark { font-size: 24px; }
+  .nav-links { display: flex; gap: 8px; align-items: center; }
+  .nav-links a:not(.btn) { font-family: var(--font-body); font-size: 14px; font-weight: 700;
+    color: var(--pp-ink-soft); text-decoration: none; padding: 8px 12px; border-radius: var(--radius-md); }
+  .nav-links a:not(.btn):hover { color: var(--pp-ink); background: var(--surface-well); }
+
+  /* hero */
+  .hero { display: grid; grid-template-columns: 1.05fr .95fr; gap: 40px; align-items: center; padding: 40px 0 64px; }
+  .hero h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(40px, 6.5vw, 72px);
+    line-height: 1.02; letter-spacing: var(--tracking-display); margin: 18px 0 18px; }
+  .hero h1 .accent { color: var(--pp-coral); }
+  .hero h1 .strike { position: relative; white-space: nowrap; }
+  .hero h1 .strike::after { content: ""; position: absolute; left: -2%; right: -2%; top: 52%;
+    height: 6px; background: var(--pp-coral); border-radius: 3px; transform: rotate(-1.5deg); }
+  .hero p.lead { font-size: 17px; color: var(--text-secondary); max-width: 460px; }
+  .hero-cta { display: flex; gap: 12px; margin-top: 26px; flex-wrap: wrap; }
+  .hero-stats { display: flex; gap: 14px; margin-top: 34px; flex-wrap: wrap; }
+  .hero-stats .card { padding: 14px 16px; min-width: 96px; }
+  .hero-stats .v { font-family: var(--font-display); font-size: 30px; line-height: 1; color: var(--pp-coral); }
+  .hero-stats .v.teal { color: var(--pp-teal); }
+  .hero-stats .v.lime { color: var(--pp-lime-deep); }
+  .hero-stats .l { font-family: var(--font-body); font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+  /* live feed preview */
+  .feedcard { padding: 18px; }
+  .feedcard__head { display: flex; align-items: center; gap: 8px; font-family: var(--font-pixel-label);
+    font-size: 9px; letter-spacing: var(--tracking-label); color: var(--text-muted);
+    padding-bottom: 12px; border-bottom: var(--border-hair); margin-bottom: 6px; }
+  .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--pp-lime); }
+  .alert { display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center;
+    padding: 12px 4px; border-bottom: var(--border-hair); }
+  .alert:last-child { border-bottom: 0; }
+  .alert__icon { width: 44px; height: 44px; border: var(--border-mid); border-radius: var(--radius-md);
+    display: flex; align-items: center; justify-content: center; }
+  .alert__icon img { width: 24px; }
+  .alert__t { font-family: var(--font-body); font-weight: 700; font-size: 14px; }
+  .alert__m { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  /* shops marquee */
+  .shops { border-block: var(--border-mid); background: var(--surface-well); overflow: hidden; padding: 14px 0; margin: 8px 0 0; }
+  .shops__track { display: flex; gap: 44px; width: max-content; animation: marq 24s linear infinite;
+    font-family: var(--font-pixel-label); font-size: 12px; letter-spacing: var(--tracking-label);
+    text-transform: uppercase; color: var(--pp-ink-soft); }
+  @keyframes marq { to { transform: translateX(-50%); } }
+
+  /* sections */
+  section { padding: 72px 0; }
+  .sec-kicker { font-family: var(--font-pixel-label); font-size: 10px; letter-spacing: var(--tracking-label);
+    text-transform: uppercase; color: var(--pp-teal-deep); }
+  h2 { font-family: var(--font-display); font-weight: 400; font-size: clamp(28px, 4vw, 42px);
+    line-height: 1.05; letter-spacing: var(--tracking-display); margin: 12px 0 10px; }
+  .sec-sub { color: var(--text-secondary); max-width: 560px; }
+  .cards3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 40px; }
+  .feature .ic { font-size: 24px; display: inline-flex; width: 44px; height: 44px; align-items: center;
+    justify-content: center; border: var(--border-mid); border-radius: var(--radius-md); background: var(--surface-well); margin-bottom: 14px; }
+  .feature h3 { font-family: var(--font-display); font-size: 20px; font-weight: 400; margin: 0 0 8px; }
+  .feature p { color: var(--text-secondary); font-size: 14px; margin: 0; }
+  .feature .tag { float: right; }
+
+  /* pricing */
+  .plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 40px; align-items: stretch; }
+  .plan { display: flex; flex-direction: column; padding: 26px 22px; position: relative; }
+  .plan.featured { box-shadow: var(--shadow-sticker-lg); border-color: var(--pp-coral); }
+  .plan__name { font-family: var(--font-pixel-label); font-size: 11px; letter-spacing: var(--tracking-label); color: var(--text-muted); }
+  .plan__price { font-family: var(--font-display); font-size: 40px; line-height: 1; margin: 12px 0 2px; }
+  .plan__per { font-size: 12px; color: var(--text-muted); margin-bottom: 20px; }
+  .plan ul { list-style: none; padding: 0; margin: 0 0 22px; display: grid; gap: 10px; font-size: 14px; color: var(--text-secondary); }
+  .plan li::before { content: "✓"; color: var(--pp-lime-deep); font-weight: 700; margin-right: 8px; }
+  .plan .btn { margin-top: auto; }
+  .plan__badge { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); }
+
+  /* community */
+  .cta { text-align: center; padding: 56px 24px; }
+  .cta h2 { margin-top: 0; }
+  .cta p { color: var(--text-secondary); max-width: 460px; margin: 0 auto 24px; }
+
+  footer { border-top: var(--border-mid); padding: 28px 0; display: flex; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap; color: var(--text-muted); font-size: 13px; }
+  footer a { color: var(--pp-ink-soft); }
+
   @media (max-width: 860px) {
-    .split { grid-template-columns: 1fr; }
-    .sidebar { width: 74px; }
-    .sidebar__logo .wordmark, .navitem span:not(.navitem__icon), .trainer { display: none; }
-    .main__title { font-size: var(--display-md); }
+    .hero { grid-template-columns: 1fr; }
+    .cards3, .plans { grid-template-columns: 1fr; }
+    .nav-links a:not(.btn) { display: none; }
   }
 </style>
 </head>
 <body>
-<div class="layout">
-  <aside class="sidebar">
-    <div class="sidebar__logo">
-      <span class="blip-badge"><img src="assets/blip-white.svg" alt="" width="20"></span>
+<div class="wrap">
+  <nav>
+    <a class="brand" href="index.html">
+      <span class="blip-badge"><img src="assets/blip-white.svg" alt="" width="22"></span>
       <span class="wordmark">POCKET<b>POP</b></span>
+    </a>
+    <div class="nav-links">
+      <a href="#feed">Live feed</a>
+      <a href="#features">Features</a>
+      <a href="#prijzen">Prijzen</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a class="btn btn--sm" href="#community">WORD LID</a>
     </div>
-    <a class="navitem navitem--active" href="index.html"><span class="navitem__icon">▦</span><span>Dashboard</span></a>
-    <a class="navitem" href="app.html"><span class="navitem__icon">◉</span><span>Mijn dex</span></a>
-    <a class="navitem" href="card-tracker.html"><span class="navitem__icon">▤</span><span>Kaarten</span></a>
-    <a class="navitem" href="#"><span class="navitem__icon">⚑</span><span>Team builder</span></a>
-    <a class="navitem" href="#"><span class="navitem__icon">⇄</span><span>Ruilen</span></a>
-    <a class="navitem" href="#"><span class="navitem__icon">⚙</span><span>Instellingen</span></a>
-    <div class="trainer">
-      <div class="pixel muted" style="font-size:9px;margin-bottom:8px;">TRAINER</div>
-      <div style="font-family:var(--font-body);font-weight:800;font-size:14px;">Ash_1996</div>
-      <div class="progress__track" style="height:10px;margin-top:8px;">
-        <div class="progress__fill" style="width:64%;background:var(--pp-amber);"></div>
-      </div>
-      <div class="mono muted" style="font-size:10px;margin-top:4px;">LVL 12 · 640/1000 XP</div>
-    </div>
-  </aside>
+  </nav>
 
-  <main class="main">
-    <div class="main__head">
-      <div>
-        <div class="kicker" style="margin-bottom:6px;">WELKOM TERUG</div>
-        <h1 class="main__title">Hoi Ash, klaar voor de jacht?</h1>
+  <header class="hero">
+    <div>
+      <span class="sec-kicker">● Live monitoring · 24/7</span>
+      <h1>Wees er <span class="accent">vóór</span> de <span class="strike">scalpers</span>.</h1>
+      <p class="lead">PocketPop houdt webshops non-stop in de gaten voor restocks en prijsdalingen van TCG en andere gewilde items. Jij krijgt direct een melding met een kant-en-klare koop-link — de bestelling doe je zelf, in seconden.</p>
+      <div class="hero-cta">
+        <a class="btn" href="#community">WORD LID</a>
+        <a class="btn btn--neutral btn--body" href="dashboard.html">Bekijk het dashboard →</a>
       </div>
-      <div style="display:flex;gap:10px;">
-        <button class="btn btn--sm btn--secondary btn--body">Ruilverzoek</button>
-        <button class="btn btn--sm">+ NIEUWE CATCH</button>
-      </div>
-    </div>
-
-    <div class="statrow">
-      <div class="card card--sm statcard">
-        <div class="pixel muted" style="font-size:9px;margin-bottom:8px;">GEVANGEN</div>
-        <div class="statcard__value" style="color:var(--pp-coral);">87</div>
-        <div style="font-size:12px;color:var(--text-secondary);margin-top:6px;">van 151 in Kanto</div>
-      </div>
-      <div class="card card--sm statcard">
-        <div class="pixel muted" style="font-size:9px;margin-bottom:8px;">SHINY</div>
-        <div class="statcard__value" style="color:var(--pp-amber-deep);">4</div>
-        <div style="font-size:12px;color:var(--text-secondary);margin-top:6px;">1 deze maand</div>
-      </div>
-      <div class="card card--sm statcard">
-        <div class="pixel muted" style="font-size:9px;margin-bottom:8px;">RUILS</div>
-        <div class="statcard__value" style="color:var(--pp-teal);">23</div>
-        <div style="font-size:12px;color:var(--text-secondary);margin-top:6px;">3 open verzoeken</div>
-      </div>
-      <div class="card card--sm statcard">
-        <div class="pixel muted" style="font-size:9px;margin-bottom:8px;">STREAK</div>
-        <div class="statcard__value" style="color:var(--pp-lime-deep);">12</div>
-        <div style="font-size:12px;color:var(--text-secondary);margin-top:6px;">dagen actief</div>
+      <div class="hero-stats">
+        <div class="card card--sm"><div class="v">24/7</div><div class="l">monitoring</div></div>
+        <div class="card card--sm"><div class="v teal">1 tik</div><div class="l">naar de koop-link</div></div>
+        <div class="card card--sm"><div class="v lime">€0</div><div class="l">om te starten</div></div>
       </div>
     </div>
-
-    <div class="split">
-      <div class="card" style="padding:20px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-          <span class="display" style="font-size:24px;">Collectie-voortgang</span>
-          <div class="tabs tabs--body" id="progtabs">
-            <button class="tab" aria-selected="true">Week</button>
-            <button class="tab" aria-selected="false">Maand</button>
-            <button class="tab" aria-selected="false">Alles</button>
-          </div>
-        </div>
-        <div style="display:grid;gap:12px;">
-          <div>
-            <div class="progress__head"><span class="progress__label">Kanto</span><span class="progress__value">87/151</span></div>
-            <div class="progress__track"><div class="progress__fill" style="width:57.6%;background:var(--pp-lime);"></div></div>
-          </div>
-          <div>
-            <div class="progress__head"><span class="progress__label">Johto</span><span class="progress__value">34/100</span></div>
-            <div class="progress__track"><div class="progress__fill" style="width:34%;background:var(--pp-teal);"></div></div>
-          </div>
-          <div>
-            <div class="progress__head"><span class="progress__label">Hoenn</span><span class="progress__value">12/135</span></div>
-            <div class="progress__track"><div class="progress__fill" style="width:8.9%;background:var(--pp-amber);"></div></div>
-          </div>
-          <div>
-            <div class="progress__head"><span class="progress__label">Shiny dex</span><span class="progress__value">4/151</span></div>
-            <div class="progress__track"><div class="progress__fill" style="width:2.6%;background:var(--pp-coral);"></div></div>
-          </div>
-        </div>
-        <div style="display:flex;gap:5px;margin-top:16px;flex-wrap:wrap;align-items:center;">
-          <span class="chip chip--sm" data-type="grass">grass</span>
-          <span class="chip chip--sm" data-type="fire">fire</span>
-          <span class="chip chip--sm" data-type="water">water</span>
-          <span class="chip chip--sm" data-type="electric">electric</span>
-          <span class="chip chip--sm" data-type="ghost">ghost</span>
-          <span style="font-size:11px;color:var(--text-muted);">meest gevangen types</span>
-        </div>
-      </div>
-
-      <div style="display:grid;gap:16px;">
-        <div class="card" style="padding:20px;">
-          <div class="display" style="font-size:24px;margin-bottom:12px;">Activiteit</div>
-          <div style="display:grid;gap:10px;">
-            <div class="activity-row"><span class="badge badge--lime">CATCH</span>
-              <div style="flex:1;min-width:0;">
-                <div style="font-size:13px;font-weight:600;">Voltling gevangen</div>
-                <div class="mono muted" style="font-size:10px;">2 min geleden</div>
-              </div></div>
-            <div class="activity-row"><span class="badge badge--teal">TRADE</span>
-              <div style="flex:1;min-width:0;">
-                <div style="font-size:13px;font-weight:600;">Ruil voltooid met @mika</div>
-                <div class="mono muted" style="font-size:10px;">1 uur geleden</div>
-              </div></div>
-            <div class="activity-row"><span class="badge badge--amber">SHINY</span>
-              <div style="flex:1;min-width:0;">
-                <div style="font-size:13px;font-weight:600;">Shiny Wispurr gespot</div>
-                <div class="mono muted" style="font-size:10px;">3 uur geleden</div>
-              </div></div>
-            <div class="activity-row"><span class="badge">TEAM</span>
-              <div style="flex:1;min-width:0;">
-                <div style="font-size:13px;font-weight:600;">Team 'Regenboog' opgeslagen</div>
-                <div class="mono muted" style="font-size:10px;">gisteren</div>
-              </div></div>
-          </div>
-        </div>
-        <div class="card card--sm card--well" style="padding:16px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-              <div style="font-weight:700;font-size:13px;">Openbaar profiel</div>
-              <div style="font-size:11px;color:var(--text-muted);">Anderen kunnen je dex zien</div>
-            </div>
-            <label class="switch">
-              <input type="checkbox" role="switch" checked>
-              <span class="switch__track"><span class="switch__thumb"></span></span>
-            </label>
-          </div>
-        </div>
-      </div>
+    <div class="card feedcard">
+      <div class="feedcard__head"><span class="live-dot"></span> ALERT-FEED · VOORBEELD</div>
+      <div id="alerts"></div>
     </div>
-  </main>
+  </header>
 </div>
+
+<div class="shops" aria-hidden="true">
+  <div class="shops__track">
+    <span>▸ bol.com</span><span>▸ MediaMarkt</span><span>▸ Coolblue</span><span>▸ Intertoys</span><span>▸ Dreamland</span><span>▸ Game Mania</span><span>▸ Amazon.nl</span>
+    <span>▸ bol.com</span><span>▸ MediaMarkt</span><span>▸ Coolblue</span><span>▸ Intertoys</span><span>▸ Dreamland</span><span>▸ Game Mania</span><span>▸ Amazon.nl</span>
+  </div>
+</div>
+
+<div class="wrap">
+  <section id="feed">
+    <span class="sec-kicker">// Live feed</span>
+    <h2>Elke restock, direct in beeld</h2>
+    <p class="sec-sub">Zodra een product op voorraad komt, verschijnt het in de feed en gaat er een melding uit — browser, telefoon of geluid. Met één tik sta je op de productpagina, klaar om af te rekenen.</p>
+    <div class="hero-cta"><a class="btn btn--secondary btn--body" href="dashboard.html">Open het dashboard →</a></div>
+  </section>
+
+  <section id="features">
+    <span class="sec-kicker">// Features</span>
+    <h2>Alles om als eerste te scoren</h2>
+    <p class="sec-sub">Geen bots, geen trucs: gewoon sneller weten dan de rest, en meteen kunnen handelen.</p>
+    <div class="cards3">
+      <div class="card feature"><span class="ic">⚡</span><h3>Razendsnelle alerts</h3><p>Non-stop monitoring met meldingen via browser, telefoon (push) en geluid. Restock gezien = melding binnen.</p></div>
+      <div class="card feature"><span class="ic">🛒</span><h3>1-tik koop-link</h3><p>Elke alert bevat een directe link naar de productpagina, klaar om zelf af te rekenen. Geen zoeken, geen geklik.</p></div>
+      <div class="card feature"><span class="ic">🏪</span><h3>Meerdere winkels</h3><p>bol.com via de officiële API; MediaMarkt en Coolblue op de roadmap. Alles in één feed, met filter per winkel.</p></div>
+      <div class="card feature"><span class="ic">📉</span><h3>Prijsdalingen</h3><p>Niet alleen restocks: ook prijsdrops komen binnen, met oude en nieuwe prijs en een grafiekje van het verloop.</p></div>
+      <div class="card feature"><span class="badge badge--amber tag">HOT</span><span class="ic">🔥</span><h3>Hot items</h3><p>Markeer je belangrijkste producten: die worden vaker gecheckt en alarmeren luider, met urgente push.</p></div>
+      <div class="card feature"><span class="ic">🔎</span><h3>Filters &amp; zoeken</h3><p>Filter per winkel of status, zoek op naam of EAN, sorteer op prijs. Jouw feed, jouw regels — geen geruis.</p></div>
+    </div>
+  </section>
+
+  <section id="roadmap">
+    <span class="sec-kicker">// Op de radar</span>
+    <h2>De features die het verschil maken</h2>
+    <p class="sec-sub">We bouwen in de open, stap voor stap. Dit staat op de roadmap — pas live als het echt werkt.</p>
+    <div class="cards3">
+      <div class="card feature"><span class="badge tag">VIP</span><span class="ic">🎯</span><h3>Bol Drop Status</h3><p>Zien wanneer een productpagina van offline naar online schakelt, vóórdat de drop publiek gaat. Dat venster is goud waard.</p></div>
+      <div class="card feature"><span class="badge tag">VIP</span><span class="ic">🏬</span><h3>Instore-voorraad</h3><p>Fysieke winkelvoorraad volgen en filteren op jouw regio — geen pings over Maastricht als je in Groningen woont.</p></div>
+      <div class="card feature"><span class="badge tag">VIP</span><span class="ic">🃏</span><h3>Wishlist-alerts</h3><p>Ook singles: volg een kaart met een maximumprijs en krijg een melding zodra er een aanbieding onder je limiet is.</p></div>
+      <div class="card feature"><span class="badge badge--coral tag">PREMIUM</span><span class="ic">🛒</span><h3>Push → afrekenen</h3><p>Per winkel instellen wat een tik doet: productpagina, 1x of 2x in het mandje, of direct naar afrekenen.</p></div>
+      <div class="card feature"><span class="badge badge--coral tag">PREMIUM</span><span class="ic">📊</span><h3>Prijslimieten</h3><p>Stel per product een max in. Alleen een ping bij een goede deal, niet bij elke herstock. Stopt het geruis.</p></div>
+      <div class="card feature"><span class="badge badge--coral tag">PREMIUM</span><span class="ic">📸</span><h3>AI centering-check</h3><p>Foto van je kaart, direct een PSA-stijl centering-indicatie — precies het stukje twijfel vóór een grading-submission.</p></div>
+    </div>
+  </section>
+
+  <section id="prijzen">
+    <span class="sec-kicker">// Prijzen</span>
+    <h2>Gratis om te starten</h2>
+    <p class="sec-sub">De kern is en blijft gratis; premium-features komen later voor wie meer wil.</p>
+    <div class="plans">
+      <div class="card plan">
+        <div class="plan__name">GRATIS</div>
+        <div class="plan__price">€0</div>
+        <div class="plan__per">voor altijd</div>
+        <ul>
+          <li>Live dashboard met alle producten</li>
+          <li>Browser- en geluidsmeldingen</li>
+          <li>Telefoon-push via ntfy</li>
+          <li>Prijshistorie &amp; filters</li>
+        </ul>
+        <a class="btn btn--neutral btn--body" href="dashboard.html">Open dashboard</a>
+      </div>
+      <div class="card plan featured">
+        <span class="plan__badge badge badge--lime">NU BESCHIKBAAR</span>
+        <div class="plan__name">EARLY ACCESS</div>
+        <div class="plan__price">€0</div>
+        <div class="plan__per">jij test, wij bouwen</div>
+        <ul>
+          <li>Alles van gratis</li>
+          <li>Hot items: sneller checken, luider alarm</li>
+          <li>Wensen direct op de roadmap</li>
+          <li>Founding-member status</li>
+        </ul>
+        <a class="btn" href="#community">DOE MEE</a>
+      </div>
+      <div class="card plan">
+        <div class="plan__name">VIP · BINNENKORT</div>
+        <div class="plan__price">€?</div>
+        <div class="plan__per">maandelijks opzegbaar</div>
+        <ul>
+          <li>Meer winkels, kortere intervallen</li>
+          <li>Drop-signalen het eerst</li>
+          <li>Prijslimieten per product</li>
+          <li>Exclusieve community</li>
+        </ul>
+        <a class="btn btn--neutral btn--body" href="#community">Hou me op de hoogte</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="community">
+    <div class="card cta">
+      <span class="sec-kicker">// Community</span>
+      <h2>Samen scoren &gt; alleen zoeken</h2>
+      <p>PocketPop is net gestart. Word founding member: denk mee over features, krijg alerts het eerst en bouw de beste drop-community van NL &amp; BE mee op.</p>
+      <a class="btn btn--lg" href="dashboard.html">START MET HET DASHBOARD →</a>
+    </div>
+  </section>
+
+  <footer>
+    <span>© 2026 PocketPop · meldingen, geen bots — jij doet zelf de bestelling.</span>
+    <span><a href="dashboard.html">Dashboard</a> · <a href="https://github.com/devkylianhos/pokemon">GitHub</a></span>
+  </footer>
+</div>
+
 <script>
-  // Tabs: alleen de actieve markeren
-  document.querySelectorAll("#progtabs .tab").forEach(function (t) {
-    t.addEventListener("click", function () {
-      document.querySelectorAll("#progtabs .tab").forEach(function (x) { x.setAttribute("aria-selected", "false"); });
-      t.setAttribute("aria-selected", "true");
-    });
-  });
+  // Voorbeeld-alerts die in de feed "binnenkomen" (illustratief)
+  var DEMO_ALERTS = [
+    { c: "grass",    t: "Pokémon 151 Booster Bundle",  tag: "RESTOCK", tone: "badge--lime", shop: "bol.com",    price: "€54,99" },
+    { c: "electric", t: "Prismatic Evolutions ETB",    tag: "PRIJS ↓", tone: "badge--teal", shop: "MediaMarkt", price: "€59,99 → €49,95" },
+    { c: "water",    t: "One Piece OP-09 Booster Box", tag: "RESTOCK", tone: "badge--lime", shop: "bol.com",    price: "€89,99" },
+    { c: "amber",    t: "Destined Rivals Bundle",      tag: "DROP",    tone: "badge--amber", shop: "bol.com",   price: "—" },
+    { c: "fire",     t: "LEGO Icons Orchidee 10311",   tag: "RESTOCK", tone: "badge--lime", shop: "MediaMarkt", price: "€44,99" },
+  ];
+  var feed = document.getElementById("alerts");
+  var i = 0;
+  function esc(s){ return String(s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+  function pushAlert() {
+    var a = DEMO_ALERTS[i % DEMO_ALERTS.length]; i++;
+    var el = document.createElement("div");
+    el.className = "alert";
+    var bg = a.c === "amber" ? "var(--pp-amber)" : ("var(--type-" + a.c + ")");
+    el.innerHTML =
+      '<div class="alert__icon" style="background:' + bg + ';"><img src="assets/blip-white.svg" alt=""></div>'
+      + '<div><div class="alert__t">' + esc(a.t) + '</div>'
+      + '<div class="alert__m">' + a.shop + ' · ' + a.price + ' · zojuist</div></div>'
+      + '<span class="badge ' + a.tone + '">' + a.tag + '</span>';
+    feed.prepend(el);
+    while (feed.children.length > 4) feed.removeChild(feed.lastChild);
+  }
+  pushAlert(); pushAlert(); pushAlert();
+  setInterval(pushAlert, 3500);
 </script>
 </body>
 </html>

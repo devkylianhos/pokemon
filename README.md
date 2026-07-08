@@ -1,53 +1,48 @@
 # PocketPop
 
-Een Pokémon-fan-app in de **Sunny Pixel Pop**-stijl: 16-bit SNES-energie op warm
-crème papier — candy-kleuren, dikke ink-borders en harde sticker-schaduwen.
-Origineel fan-brand (eigen mascotte "Blip", verzonnen creature-namen); géén
-officiële Pokémon-assets. "PocketPop" is een werknaam.
+Een restock- en drop-alert-tracker voor TCG en verzamelitems — "wees er vóór de
+scalpers". Vormgegeven in de **Sunny Pixel Pop**-stijl: 16-bit SNES-energie op warm
+crème papier, candy-kleuren, dikke ink-borders en harde sticker-schaduwen. Origineel
+fan-brand (eigen mascotte "Blip"); géén officiële Pokémon-assets. "PocketPop" is een
+werknaam.
 
-Geïmplementeerd vanuit een Claude Design-handoff: de React-prototypes zijn omgezet
-naar zelfstandige HTML/CSS/JS zonder build-stap, zodat het meteen op GitHub Pages
-draait.
+## Frontend
 
-## Schermen
-
-| Bestand | Scherm |
+| Bestand | Wat |
 |---|---|
-| [`index.html`](index.html) | **Web-dashboard** — sidebar, stats, collectie-voortgang, activiteit |
-| [`card-tracker.html`](card-tracker.html) | **Card tracker** — kaartenbinder met grid, filters, waarde en wishlist |
-| [`app.html`](app.html) | **Mobiele dex-app** — browsen, zoeken, filteren, detail met stats en "vangen" |
-| [`pocketpop.css`](pocketpop.css) | Gedeeld design system: tokens + alle componentklassen |
-| [`assets/`](assets/) | Mascotte "Blip" (pixel-SVG, meerdere kleurvarianten) |
+| [`index.html`](index.html) | **Landing** — hero, live-feed-voorbeeld, features, roadmap, prijzen, community |
+| [`dashboard.html`](dashboard.html) | **Live dashboard** — watchlist, restocks/prijsdalingen, koop-links, meldingen |
+| [`pocketpop.css`](pocketpop.css) | Design system: tokens + componentklassen (Sunny Pixel Pop) |
+| [`assets/`](assets/) | Mascotte "Blip" (pixel-SVG) |
 
-De drie schermen zijn onderling gelinkt via de sidebar-navigatie op het dashboard.
+Het dashboard leest uit **Supabase** en draait in **demo-modus** zolang de keys niet
+zijn ingevuld (dan zie je voorbeelddata met een gele banner). Features: zoeken,
+filters (status + winkel), sorteren, prijs-sparklines, "hot" items (sneller pollen +
+luider alarm), browser-/geluids-/telefoonmeldingen (ntfy) en per-winkel koop-links.
 
-## Design system
+Vul bovenaan `dashboard.html` je `SUPABASE_URL` en `SUPABASE_ANON_KEY` in voor live data.
 
-- **Kleur:** crème papier `#FDF4E3`, wit voor kaarten, navy ink `#1E2245` voor tekst,
-  borders én schaduwen. Vier candy-accenten (coral, teal, lime, amber) + 18 type-kleuren.
-- **Type:** Jersey 15 (pixel-display, groot), Sora (UI/body), Silkscreen (mini-labels),
-  Space Mono (cijfers/ids) — via Google Fonts.
-- **Borders:** 3px ink op kaarten/knoppen, 2px op kleine controls.
-- **Schaduwen:** harde offset zonder blur (sticker), altijd ink-kleurig.
-- **Radii:** chunky (6/10/14/20/pill). **Animatie:** snappy arcade — hover lift, press-squish.
+### Design system
+Crème papier `#FDF4E3`, navy ink `#1E2245` voor tekst/borders/schaduwen, vier
+candy-accenten (coral, teal, lime, amber). Fonts: Jersey 15 (pixel-display), Sora
+(UI/body), Silkscreen (mini-labels), Space Mono (cijfers) — via Google Fonts.
+Dikke ink-borders, harde sticker-schaduwen, chunky radii, snappy arcade-animatie.
 
-Alle 17 componenten uit de handoff (Button, Badge, Card, Input, Select, Checkbox,
-Switch, Tabs, TypeChip, StatBar, ProgressBar, Dialog, Toast, IconButton …) zijn als
-CSS-klassen in `pocketpop.css` beschikbaar.
+## Backend — tracker
+
+De map [`tracker/`](tracker/) bevat de Python-tracker die voorraad en prijzen volgt
+via de officiële **bol Retailer API** en naar Supabase schrijft. Draait automatisch
+via GitHub Actions ([`.github/workflows/tracker.yml`](.github/workflows/tracker.yml))
+en heeft een testsuite (`pytest tracker/`).
+
+**Setup:** voer [`schema.sql`](schema.sql) uit in Supabase, zet de GitHub-secrets
+(`SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `BOL_CLIENT_ID`, `BOL_CLIENT_SECRET`) en
+vul [`tracker/watchlist.json`](tracker/watchlist.json). Zie de commentaarblokken in
+`tracker/tracker.py` voor details.
 
 ## Lokaal bekijken
-
-Geen build nodig — open de bestanden direct of serveer de map:
-
+Geen build nodig:
 ```bash
 python3 -m http.server 4173
 # open http://localhost:4173/index.html
 ```
-
-## Tracker-backend (los onderdeel)
-
-De map [`tracker/`](tracker/) bevat een aparte Python-tracker die voorraad en prijzen
-op bol.com volgt via de officiële **bol Retailer API** en naar Supabase schrijft
-(met GitHub Actions-workflow en testsuite). Dit is een onafhankelijk backend-project
-dat losstaat van de PocketPop-frontend hierboven; zie de bestanden in `tracker/` en
-[`schema.sql`](schema.sql).
