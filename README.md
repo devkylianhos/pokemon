@@ -59,6 +59,22 @@ Voor een venster van 5–10 minuten wil je snel pollen (elke ~60s op een altijd-
 host); GitHub Actions draait minimaal ~5 min. Zie de opmerking in
 [`.github/workflows/tracker.yml`](.github/workflows/tracker.yml).
 
+### Watchlist automatisch vullen ([`tracker/discover.py`](tracker/discover.py))
+De Retailer API kan niet zoeken op merk, dus EANs moeten ergens vandaan komen.
+`discover.py` zoekt op de openbare bol-zoekpagina, haalt de EANs uit de
+productpagina's, verrijkt ze via het catalogus-endpoint (titel + merk) en houdt
+**alleen échte Pokémon sealed-producten** over (accessoires zoals cases/sleeves
+vallen af op merk). Draai het af en toe handmatig:
+
+```bash
+BOL_CLIENT_ID=… BOL_CLIENT_SECRET=… python tracker/discover.py --write
+```
+
+Zonder `--write` toont het alleen wat het zou toevoegen. Het is een hulpmiddel
+dat je zelf draait (geen onderdeel van de 5-min-tracker); bekijk de output na,
+want de accessoire-filtering is goed maar niet perfect. Zoektermen aanpassen met
+`--terms "pokemon booster box,pokemon etb"`.
+
 ## Lokaal bekijken
 Geen build nodig:
 ```bash
