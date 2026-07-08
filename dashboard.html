@@ -135,9 +135,10 @@
   </aside>
 </main>
 <script>
-// VUL DEZE TWEE IN vanuit Supabase: Project Settings > API
-const SUPABASE_URL = "https://JOUWPROJECT.supabase.co";
-const SUPABASE_ANON_KEY = "PLAK_HIER_JE_ANON_PUBLIC_KEY";
+// Supabase — anon key is bedoeld om openbaar te zijn; RLS (zie schema.sql)
+// staat alleen SELECT toe, dus dit is veilig om te committen.
+const SUPABASE_URL = "https://qfjsvyaziwuwfscjdohk.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmanN2eWF6aXd1d2ZzY2pkb2hrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1MjM0NTUsImV4cCI6MjA5OTA5OTQ1NX0.a76w5aV304x0L6tRPYXuz8jjXLi1z33udrdMEgGoXKQ";
 
 const HEADERS = { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY };
 const LABELS = { bol_drop: "BOL DROP", restock: "RESTOCK", price_drop: "PRIJS", out_of_stock: "WEG", drop_signal: "DROP" };
