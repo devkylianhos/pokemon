@@ -329,6 +329,13 @@ def main():
         if cur is None:  # niet-ondersteunde winkel
             continue
 
+        # Bol Drop Status: voor drop_watch-items telt ALLEEN bol's eigen verkoop
+        # (retailerId 0), niet de marketplace-verkopers. We richten in_stock/price
+        # op bol's aanbieding, zodat een "restock" hier letterlijk = bol gaat live.
+        drop_watch = bool(item.get("drop_watch")) and "bol_in_stock" in cur
+        if drop_watch:
+            cur = {**cur, "in_stock": cur["bol_in_stock"], "price": cur["bol_price"]}
+
         prev = prev_state.get((item["retailer"], item["ean"]))
 
         # Bij onbekende voorraad/prijs: geen gebeurtenissen verzinnen en de
@@ -337,6 +344,9 @@ def main():
         if known:
             events = diff_events(prev, cur, item, ts)
             for ev in events:
+                # Een restock op een drop_watch-item is een échte bol-drop.
+                if drop_watch and ev["type"] == "restock":
+                    ev["type"] = "bol_drop"
                 log(f"  → {ev['type'].upper()}: {item['name']} ({item['retailer']})")
             event_rows.extend(events)
         in_stock_val = cur["in_stock"] if known else (prev["in_stock"] if prev else False)

@@ -7,11 +7,13 @@
   {
     "name": "Pokémon TCG Scarlet & Violet 151 Booster Bundle",
     "ean": "0820650858079",
-    "retailer": "bol"
+    "retailer": "bol",
+    "drop_watch": true
   },
   {
-    "name": "LEGO Icons Botanical Orchidee 10311",
-    "ean": "5702017152738",
-    "retailer": "bol"
+    "name": "Pokémon Prismatic Evolutions Elite Trainer Box",
+    "ean": "0820650557064",
+    "retailer": "bol",
+    "drop_watch": true
   }
 ]

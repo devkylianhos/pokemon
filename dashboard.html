@@ -81,6 +81,7 @@
   .event:last-child { border-bottom: 0; }
   .event .tag { flex-shrink: 0; font-family: var(--font-pixel-label); font-size: 8px; letter-spacing: var(--tracking-label);
     text-transform: uppercase; padding: 3px 7px; border: 2px solid var(--pp-ink); border-radius: 4px; color: var(--pp-ink); }
+  .tag.bol_drop { background: var(--pp-coral); color: #fff; box-shadow: var(--shadow-sticker-sm); }
   .tag.restock { background: var(--pp-lime); }
   .tag.price_drop { background: var(--type-water); }
   .tag.out_of_stock { background: var(--pp-coral); color: #fff; }
@@ -139,9 +140,9 @@ const SUPABASE_URL = "https://JOUWPROJECT.supabase.co";
 const SUPABASE_ANON_KEY = "PLAK_HIER_JE_ANON_PUBLIC_KEY";
 
 const HEADERS = { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY };
-const LABELS = { restock: "RESTOCK", price_drop: "PRIJS", out_of_stock: "WEG", drop_signal: "DROP" };
-const NOTIFY_TYPES = ["restock", "price_drop", "drop_signal"];
-const BUYABLE_TYPES = ["restock", "price_drop"];
+const LABELS = { bol_drop: "BOL DROP", restock: "RESTOCK", price_drop: "PRIJS", out_of_stock: "WEG", drop_signal: "DROP" };
+const NOTIFY_TYPES = ["bol_drop", "restock", "price_drop", "drop_signal"];
+const BUYABLE_TYPES = ["bol_drop", "restock", "price_drop"];
 const REFRESH_MS = 30000;
 const REFRESH_HOT_MS = 10000;
 const DEMO = SUPABASE_URL.includes("JOUWPROJECT") || SUPABASE_ANON_KEY.startsWith("PLAK_");
@@ -204,6 +205,7 @@ function rtBadge(x) {
 }
 function eventText(e) {
   let txt = e.name;
+  if (e.type === "bol_drop") txt += " — bol verkoopt nu, " + euro(e.price);
   if (e.type === "restock") txt += " voor " + euro(e.price);
   if (e.type === "price_drop") txt += " " + euro(e.old_price) + " → " + euro(e.price);
   if (e.type === "drop_signal") txt += " wordt klaargezet";
@@ -367,7 +369,7 @@ function pushPhone(e) {
   const hot = state.hot.has(e.ean);
   const headers = {
     Title: "PocketPop — " + (LABELS[e.type] || e.type) + " bij " + retailerInfo(e).label,
-    Priority: hot ? "urgent" : "high",
+    Priority: (hot || e.type === "bol_drop") ? "urgent" : "high",
     Tags: e.type === "restock" ? "package" : (e.type === "price_drop" ? "chart_with_downwards_trend" : "eyes"),
   };
   if (BUYABLE_TYPES.includes(e.type)) headers.Actions = "view, Koop nu, " + eventLink(e);
@@ -497,6 +499,7 @@ async function refresh() {
 function loadDemo() {
   const m = min => new Date(Date.now() - min * 60000).toISOString();
   state.products = [
+    { name: "Pokémon Prismatic Evolutions Booster Box", ean: "0820650557712", product_id: "9300000201234567", price: 179.99, in_stock: true, listed: true, last_check: m(1), retailer: "bol", drop_watch: true },
     { name: "Pokémon TCG Scarlet & Violet 151 Booster Bundle", ean: "0820650858079", product_id: "9300000135741181", price: 54.99, in_stock: true, listed: true, last_check: m(1), retailer: "bol" },
     { name: "Prismatic Evolutions Elite Trainer Box", ean: "0820650557064", product_id: null, price: 49.95, in_stock: false, listed: true, last_check: m(2), retailer: "bol" },
     { name: "LEGO Icons Botanical Orchidee 10311", ean: "5702017152738", product_id: "9300000105713772", price: 44.99, in_stock: true, listed: true, last_check: m(1), retailer: "bol" },
@@ -505,6 +508,7 @@ function loadDemo() {
     { name: "Destined Rivals Booster Bundle", ean: "0820650557095", price: null, in_stock: false, listed: false, last_check: m(4), retailer: "coolblue" },
   ];
   state.events = [
+    { type: "bol_drop", name: "Pokémon Prismatic Evolutions Booster Box", price: 179.99, ean: "0820650557712", ts: m(1), retailer: "bol" },
     { type: "restock", name: "Pokémon TCG Scarlet & Violet 151 Booster Bundle", price: 54.99, ean: "0820650858079", ts: m(6), retailer: "bol" },
     { type: "price_drop", name: "PlayStation 5 DualSense Controller", old_price: 74.99, price: 64.99, ean: "0711719575856", ts: m(22), retailer: "mediamarkt" },
     { type: "price_drop", name: "LEGO Icons Botanical Orchidee 10311", old_price: 49.99, price: 44.99, ean: "5702017152738", ts: m(38), retailer: "bol" },

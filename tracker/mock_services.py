@@ -88,16 +88,23 @@ def _make_handler(mock: MockState):
                     "type": "https://api.bol.com/problems", "status": 404,
                     "title": "Not Found", "detail": "onbekende ean",
                 })
+            # Scenario-velden:
+            #   in_stock/price -> marketplace-aanbieding (retailerId 12345, FBR)
+            #   bol/bol_price  -> bol's eigen aanbieding (retailerId "0", FBB)
             offers = []
-            if sc.get("in_stock"):
+            if sc.get("bol"):
+                offers.append({
+                    "offerId": "b8d1621a-0000-0000-0000-0000000000b0",
+                    "retailerId": "0", "countryCode": "NL", "condition": "NEW",
+                    "price": sc.get("bol_price", sc.get("price")),
+                    "fulfilmentMethod": "FBB", "bestOffer": True,
+                })
+            if sc.get("in_stock") and not sc.get("bol"):
                 offers.append({
                     "offerId": "b8d1621a-0000-0000-0000-000000000001",
-                    "retailerId": "12345",
-                    "countryCode": "NL",
-                    "condition": "NEW",
+                    "retailerId": "12345", "countryCode": "NL", "condition": "NEW",
                     "price": sc.get("price"),
-                    "fulfilmentMethod": "FBB",
-                    "bestOffer": True,
+                    "fulfilmentMethod": "FBR", "bestOffer": True,
                 })
             return self._send(200, {"offers": offers})
 

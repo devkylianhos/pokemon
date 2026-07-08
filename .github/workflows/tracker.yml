@@ -2,9 +2,11 @@ name: boltracker
 
 on:
   schedule:
-    # Elke 10 minuten. GitHub hanteert ~5 min als minimum en kan onder drukte
-    # iets later draaien; voor drops is dat meestal snel genoeg.
-    - cron: "*/10 * * * *"
+    # Elke 5 minuten (GitHub-minimum; kan onder drukte iets later draaien).
+    # Genoeg om drops te zíén. Voor de scherpste Bol-Drop-voorsprong (venster van
+    # 5–10 min) draai je de tracker beter elke ~60s op een altijd-aan host:
+    #   while true; do python tracker/tracker.py; sleep 60; done
+    - cron: "*/5 * * * *"
   workflow_dispatch: {}   # laat je 'm ook handmatig starten via de Actions-tab
 
 # Voorkomt dat twee runs elkaar overlappen als een run uitloopt.

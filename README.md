@@ -40,6 +40,25 @@ en heeft een testsuite (`pytest tracker/`).
 vul [`tracker/watchlist.json`](tracker/watchlist.json). Zie de commentaarblokken in
 `tracker/tracker.py` voor details.
 
+### Bol Drop Status (bol's eigen verkoop)
+In de Retailer API is **bol.com zelf de verkoper met `retailerId "0"`** (Fulfilled
+By Bol); marketplace-verkopers hebben een echt nummer. Zet je een watchlist-item op
+`"drop_watch": true`, dan telt **alleen bol's eigen aanbieding** — niet de
+marketplace-verkopers die op dezelfde EAN meeliften. Zodra bol z'n eigen aanbieding
+live zet (offline → online), vuurt er een **`bol_drop`**-event met urgente melding.
+
+Zo herken je een echte bol-drop van een Pokémon-product vóórdat het publiek vindbaar
+is — mits de EAN al op je watchlist staat. Pokémon-set-EANs zijn meestal ruim voor
+release bekend, dus een gecureerde Pokémon-watchlist is de sleutel.
+
+```json
+{ "name": "Pokémon … Booster Box", "ean": "0820650…", "retailer": "bol", "drop_watch": true }
+```
+
+Voor een venster van 5–10 minuten wil je snel pollen (elke ~60s op een altijd-aan
+host); GitHub Actions draait minimaal ~5 min. Zie de opmerking in
+[`.github/workflows/tracker.yml`](.github/workflows/tracker.yml).
+
 ## Lokaal bekijken
 Geen build nodig:
 ```bash

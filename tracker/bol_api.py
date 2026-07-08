@@ -35,6 +35,11 @@ DEFAULT_API_BASE = "https://api.bol.com/retailer"
 DEFAULT_DEMO_BASE = "https://api.bol.com/retailer-demo"
 ACCEPT = "application/vnd.retailer.v10+json"
 
+# In de Retailer API is bol.com zelf de verkoper met retailerId "0"
+# (Fulfilled By Bol). Marketplace-verkopers hebben een echt nummer.
+# Overschrijfbaar via env voor het geval bol de conventie wijzigt.
+BOL_OWN_RETAILER_ID = os.environ.get("BOL_OWN_RETAILER_ID", "0")
+
 
 class BolApiError(Exception):
     """Algemene fout bij het aanroepen van de Retailer API."""
@@ -119,23 +124,28 @@ class BolRetailerClient:
     # Endpoints
     # ------------------------------------------------------------------ #
     def get_offers(self, ean):
-        """'Competing offers' voor een EAN (nieuwstaat, beste aanbieding).
+        """'Competing offers' voor een EAN (nieuwstaat).
+
+        We halen ALLE aanbiedingen op (niet alleen de beste), zodat we bol's eigen
+        aanbieding kunnen herkennen. In de Retailer API is bol.com zelf de verkoper
+        met `retailerId == "0"` (Fulfilled By Bol); een echt nummer zoals 1092159 is
+        een marketplace-verkoper.
 
         Returns dict:
-            listed   - EAN bekend in de bol-catalogus (404 = onbekend)
-            in_stock - minstens één NEW-aanbieding beschikbaar
-            price    - prijs van de beste aanbieding (incl. btw)
+            listed       - EAN bekend in de bol-catalogus (404 = onbekend)
+            in_stock     - minstens één NEW-aanbieding (bol óf marketplace)
+            price        - prijs van de beste aanbieding
+            bol_in_stock - bol zelf (retailerId 0) heeft een NEW-aanbieding
+            bol_price    - prijs van bol's eigen aanbieding
         """
+        empty = {"listed": False, "in_stock": False, "price": None,
+                 "bol_in_stock": False, "bol_price": None}
         resp = self._get(
             "/products/" + str(ean) + "/offers",
-            params={
-                "country-code": self.country,
-                "best-offer-only": "true",
-                "condition": "NEW",
-            },
+            params={"country-code": self.country, "condition": "NEW"},
         )
         if resp.status_code == 404:
-            return {"listed": False, "in_stock": False, "price": None}
+            return dict(empty)
         if resp.status_code == 400:
             # Verzoek afgekeurd — vrijwel altijd een ongeldige EAN in de watchlist.
             raise BolApiError(f"ongeldige EAN of verzoek voor '{ean}' (HTTP 400)")
@@ -151,14 +161,20 @@ class BolRetailerClient:
         data = resp.json() or {}
         offers = data.get("offers") or []
         # condition kan null zijn; we vroegen om NEW, dus behandel null als NEW.
-        new_offers = [o for o in offers if str(o.get("condition") or "NEW").upper() == "NEW"]
-        pool = new_offers or offers
-        price = None
-        for o in pool:
-            if o.get("bestOffer") and isinstance(o.get("price"), (int, float)):
-                price = float(o["price"])
-                break
-        if price is None:
-            prices = [float(o["price"]) for o in pool if isinstance(o.get("price"), (int, float))]
-            price = min(prices) if prices else None
-        return {"listed": True, "in_stock": bool(pool), "price": price}
+        pool = [o for o in offers if str(o.get("condition") or "NEW").upper() == "NEW"] or offers
+
+        def price_of(candidates):
+            for o in candidates:
+                if o.get("bestOffer") and isinstance(o.get("price"), (int, float)):
+                    return float(o["price"])
+            prices = [float(o["price"]) for o in candidates if isinstance(o.get("price"), (int, float))]
+            return min(prices) if prices else None
+
+        bol_offers = [o for o in pool if str(o.get("retailerId")) == BOL_OWN_RETAILER_ID]
+        return {
+            "listed": True,
+            "in_stock": bool(pool),
+            "price": price_of(pool),
+            "bol_in_stock": bool(bol_offers),
+            "bol_price": price_of(bol_offers),
+        }

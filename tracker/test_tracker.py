@@ -149,7 +149,8 @@ def test_offers_request_headers_en_params(monkeypatch):
     assert kw["headers"]["Accept"] == "application/vnd.retailer.v10+json"
     assert kw["headers"]["Authorization"] == "Bearer tok"
     assert kw["params"]["country-code"] == "NL"
-    assert kw["params"]["best-offer-only"] == "true"
+    # geen best-offer-only meer: we halen álle offers op om bol (retailerId 0) te vinden
+    assert "best-offer-only" not in kw["params"]
     assert kw["params"]["condition"] == "NEW"
 
 
@@ -179,25 +180,28 @@ def test_429_wordt_geretried(monkeypatch):
 def test_404_betekent_niet_listed(monkeypatch):
     s = FakeSession(post_queue=[TOKEN_OK], get_queue=[FakeResponse(404)])
     c = make_client(s, monkeypatch)
-    assert c.get_offers("111") == {"listed": False, "in_stock": False, "price": None}
+    assert c.get_offers("111") == {"listed": False, "in_stock": False, "price": None,
+                                   "bol_in_stock": False, "bol_price": None}
 
 
 def test_lege_offers_is_listed_zonder_voorraad(monkeypatch):
     s = FakeSession(post_queue=[TOKEN_OK], get_queue=[FakeResponse(200, {"offers": []})])
     c = make_client(s, monkeypatch)
-    assert c.get_offers("111") == {"listed": True, "in_stock": False, "price": None}
+    assert c.get_offers("111") == {"listed": True, "in_stock": False, "price": None,
+                                   "bol_in_stock": False, "bol_price": None}
 
 
 def test_best_offer_prijs_wint(monkeypatch):
     offers = {"offers": [
-        {"condition": "NEW", "price": 60.0, "bestOffer": False},
-        {"condition": "NEW", "price": 55.0, "bestOffer": True},
-        {"condition": "AS_NEW", "price": 40.0, "bestOffer": False},
+        {"condition": "NEW", "price": 60.0, "bestOffer": False, "retailerId": "999"},
+        {"condition": "NEW", "price": 55.0, "bestOffer": True, "retailerId": "999"},
+        {"condition": "AS_NEW", "price": 40.0, "bestOffer": False, "retailerId": "999"},
     ]}
     s = FakeSession(post_queue=[TOKEN_OK], get_queue=[FakeResponse(200, offers)])
     c = make_client(s, monkeypatch)
     result = c.get_offers("111")
-    assert result == {"listed": True, "in_stock": True, "price": 55.0}
+    assert result == {"listed": True, "in_stock": True, "price": 55.0,
+                      "bol_in_stock": False, "bol_price": None}
 
 
 def test_zonder_best_offer_laagste_new_prijs(monkeypatch):
@@ -208,6 +212,32 @@ def test_zonder_best_offer_laagste_new_prijs(monkeypatch):
     s = FakeSession(post_queue=[TOKEN_OK], get_queue=[FakeResponse(200, offers)])
     c = make_client(s, monkeypatch)
     assert c.get_offers("111")["price"] == 52.5
+
+
+def test_bol_eigen_aanbieding_herkend(monkeypatch):
+    # retailerId "0" is bol zelf; 12345 is een marketplace-verkoper.
+    offers = {"offers": [
+        {"condition": "NEW", "price": 49.99, "bestOffer": True, "retailerId": "0"},
+        {"condition": "NEW", "price": 46.39, "bestOffer": False, "retailerId": "12345"},
+    ]}
+    s = FakeSession(post_queue=[TOKEN_OK], get_queue=[FakeResponse(200, offers)])
+    c = make_client(s, monkeypatch)
+    r = c.get_offers("111")
+    assert r["in_stock"] is True                # er is een aanbieding
+    assert r["bol_in_stock"] is True            # en bol zelf verkoopt
+    assert r["bol_price"] == 49.99
+
+
+def test_alleen_marketplace_geen_bol(monkeypatch):
+    offers = {"offers": [
+        {"condition": "NEW", "price": 30.0, "bestOffer": True, "retailerId": "12345"},
+    ]}
+    s = FakeSession(post_queue=[TOKEN_OK], get_queue=[FakeResponse(200, offers)])
+    c = make_client(s, monkeypatch)
+    r = c.get_offers("111")
+    assert r["in_stock"] is True
+    assert r["bol_in_stock"] is False           # bol verkoopt (nog) niet
+    assert r["bol_price"] is None
 
 
 def test_400_geeft_nette_ongeldige_ean_fout(monkeypatch):
@@ -302,6 +332,48 @@ def test_e2e_foute_credentials_stopt_met_duidelijke_fout(watchlist_file):
         r = run_tracker(server, watchlist_file)
         assert r.returncode != 0
         assert "authenticatie" in (r.stdout + r.stderr).lower()
+
+
+def _drop_watchlist(tmp_path):
+    p = tmp_path / "drop.json"
+    p.write_text(json.dumps([
+        {"name": "Pokémon 151 Booster Bundle", "ean": "111", "retailer": "bol", "drop_watch": True},
+    ]))
+    return p
+
+
+def test_e2e_bol_drop_bij_offline_naar_online(tmp_path):
+    wl = _drop_watchlist(tmp_path)
+    with MockServer() as server:
+        # Run 1: product bestaat in catalogus maar bol verkoopt (nog) niet.
+        server.mock.scenario["111"] = {"listed": True}
+        r1 = run_tracker(server, wl)
+        assert r1.returncode == 0, r1.stderr
+        assert server.mock.state[("bol", "111")]["in_stock"] is False
+        assert server.mock.events == []
+
+        # Run 2: bol zet z'n eigen aanbieding live -> BOL DROP.
+        server.mock.scenario["111"] = {"listed": True, "bol": True, "bol_price": 54.99}
+        r2 = run_tracker(server, wl)
+        assert r2.returncode == 0, r2.stderr
+        assert [e["type"] for e in server.mock.events] == ["bol_drop"]
+        assert server.mock.events[0]["price"] == 54.99
+        assert server.mock.state[("bol", "111")]["in_stock"] is True
+
+
+def test_e2e_drop_watch_negeert_marketplace(tmp_path):
+    wl = _drop_watchlist(tmp_path)
+    with MockServer() as server:
+        # Run 1: baseline, bol verkoopt niet.
+        server.mock.scenario["111"] = {"listed": True}
+        run_tracker(server, wl)
+        # Run 2: alléén een marketplace-verkoper heeft voorraad, bol niet.
+        server.mock.scenario["111"] = {"listed": True, "in_stock": True, "price": 30.0}
+        r2 = run_tracker(server, wl)
+        assert r2.returncode == 0, r2.stderr
+        # Geen bol-drop: bol zelf verkoopt niet, dus voor drop_watch = niet op voorraad.
+        assert server.mock.events == []
+        assert server.mock.state[("bol", "111")]["in_stock"] is False
 
 
 def test_e2e_kapotte_watchlist_regel_crasht_niet(tmp_path):
