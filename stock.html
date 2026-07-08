@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PocketPop — Winkels</title>
+<meta name="description" content="Welke webshops PocketPop bewaakt op Pokémon-restocks en prijsdalingen. bol.com is live via de officiële Retailer API.">
+<link rel="stylesheet" href="pocketpop.css">
+<style>
+  .wrap { max-width: var(--page-max); margin: 0 auto; padding: 0 24px 64px; }
+  nav { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; flex-wrap: wrap; gap: 10px; }
+  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .brand .wordmark { font-size: 24px; }
+  .nav-links { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .nav-links a:not(.btn) { font-family: var(--font-body); font-size: 14px; font-weight: 700;
+    color: var(--pp-ink-soft); text-decoration: none; padding: 8px 12px; border-radius: var(--radius-md); }
+  .nav-links a.here, .nav-links a:not(.btn):hover { color: var(--pp-ink); background: var(--surface-well); }
+
+  .head { padding: 24px 0 8px; }
+  .head h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(30px, 5vw, 48px);
+    letter-spacing: var(--tracking-display); margin: 8px 0 8px; }
+  .head p { color: var(--text-secondary); max-width: 620px; }
+
+  h2.sec { font-family: var(--font-pixel-label); font-size: 10px; letter-spacing: var(--tracking-label);
+    text-transform: uppercase; color: var(--text-muted); margin: 34px 0 14px; }
+
+  .shop { padding: 22px; margin-bottom: 16px; }
+  .shop__top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .shop__name { font-family: var(--font-display); font-size: 28px; line-height: 1; }
+  .shop__url { font-family: var(--font-mono); font-size: 12px; color: var(--pp-teal-deep); text-decoration: none; }
+  .stats { display: flex; gap: 22px; margin: 16px 0 14px; flex-wrap: wrap; }
+  .stats .s b { font-family: var(--font-display); font-size: 26px; line-height: 1; display: block; }
+  .stats .s span { font-family: var(--font-pixel-label); font-size: 8px; letter-spacing: var(--tracking-label);
+    text-transform: uppercase; color: var(--text-muted); }
+  .games { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 14px; }
+  .shop p.how { color: var(--text-secondary); font-size: 14px; margin: 0; max-width: 720px; }
+  .shop p.how b { color: var(--text-body); }
+  .roadmap { opacity: .72; }
+  .grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } .nav-links a:not(.btn){ display:none; } }
+  .mini { padding: 16px 18px; }
+  .mini .n { font-family: var(--font-display); font-size: 20px; }
+  .mini .u { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+  footer { border-top: var(--border-mid); padding: 24px 0; margin-top: 36px; color: var(--text-muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <a class="brand" href="index.html">
+      <span class="blip-badge"><img src="assets/blip-white.svg" alt="" width="22"></span>
+      <span class="wordmark">POCKET<b>POP</b></span>
+    </a>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="releases.html">Releases</a>
+      <a href="database.html">Database</a>
+      <a class="here" href="stock.html">Winkels</a>
+      <a href="prijzen.html">Prijzen</a>
+    </div>
+  </nav>
+
+  <header class="head">
+    <div class="kicker" style="color:var(--pp-teal-deep);">// Gemonitorde winkels</div>
+    <h1>Welke winkels we bewaken</h1>
+    <p>PocketPop houdt webshops in de gaten op Pokémon-restocks en prijsdalingen. We beginnen bewust met één winkel die we <b>echt goed</b> doen — bol.com via de officiële API — en breiden daarna uit. Geen loze beloftes: hieronder zie je precies wat live is en wat op de planning staat.</p>
+  </header>
+
+  <h2 class="sec">Nu live</h2>
+  <div class="card shop">
+    <div class="shop__top">
+      <div>
+        <div class="shop__name">bol.com</div>
+        <a class="shop__url" href="https://www.bol.com" target="_blank" rel="noopener">www.bol.com &rarr;</a>
+      </div>
+      <span class="badge badge--lime">LIVE</span>
+    </div>
+    <div class="games">
+      <span class="chip" data-type="fire">Pokémon</span>
+    </div>
+    <div class="stats">
+      <div class="s"><b>24/7</b><span>voorraad-check</span></div>
+      <div class="s"><b>API</b><span>officieel, geen scraping</span></div>
+      <div class="s"><b>bol&nbsp;zelf</b><span>los van marketplace</span></div>
+    </div>
+    <p class="how">Voor bol gebruiken we de <b>officiële bol Retailer API</b> in plaats van de site te scrapen. Daardoor zien we niet alleen óf een product op voorraad is, maar ook of <b>bol het zélf verkoopt</b> (aanbieding met retailer-id 0 / Fulfilled By Bol) los van de marketplace-verkopers die op dezelfde EAN meeliften. Zodra bol zelf van uitverkocht naar op voorraad gaat, of een prijs zakt, verschijnt het meteen in je dashboard met een <b>Bol Drop</b>-melding en een directe koop-link. Filter op set of producttype en zet je belangrijkste items op "hot" voor snellere checks.</p>
+  </div>
+
+  <h2 class="sec">Op de planning</h2>
+  <div class="grid2">
+    <div class="card mini roadmap">
+      <div class="shop__top"><div class="n">MediaMarkt</div><span class="badge badge--amber">BINNENKORT</span></div>
+      <div class="u">www.mediamarkt.nl</div>
+      <div class="games" style="margin-top:10px;"><span class="chip chip--sm" data-type="fire">Pokémon</span></div>
+    </div>
+    <div class="card mini roadmap">
+      <div class="shop__top"><div class="n">Coolblue</div><span class="badge badge--amber">BINNENKORT</span></div>
+      <div class="u">www.coolblue.nl</div>
+      <div class="games" style="margin-top:10px;"><span class="chip chip--sm" data-type="fire">Pokémon</span></div>
+    </div>
+    <div class="card mini roadmap">
+      <div class="shop__top"><div class="n">Intertoys</div><span class="badge badge--amber">BINNENKORT</span></div>
+      <div class="u">www.intertoys.nl</div>
+      <div class="games" style="margin-top:10px;"><span class="chip chip--sm" data-type="fire">Pokémon</span></div>
+    </div>
+    <div class="card mini roadmap">
+      <div class="shop__top"><div class="n">Amazon.nl</div><span class="badge badge--amber">BINNENKORT</span></div>
+      <div class="u">www.amazon.nl</div>
+      <div class="games" style="margin-top:10px;"><span class="chip chip--sm" data-type="fire">Pokémon</span></div>
+    </div>
+  </div>
+  <p class="how" style="margin-top:16px; color:var(--text-muted);">Elke nieuwe winkel komt pas op "live" te staan als de detectie er echt betrouwbaar werkt — liever één winkel goed dan tien half.</p>
+
+  <footer>PocketPop · we bewaken, jij bestelt zelf. Winkelnamen zijn eigendom van hun respectieve eigenaren.</footer>
+</div>
+</body>
+</html>

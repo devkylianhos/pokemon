@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PocketPop — Prijzen</title>
+<meta name="description" content="Kies je PocketPop-plan: gratis starten, VIP of Premium. Maandelijks opzegbaar, voordeliger per langere periode.">
+<link rel="stylesheet" href="pocketpop.css">
+<style>
+  .wrap { max-width: var(--page-max); margin: 0 auto; padding: 0 24px 64px; }
+  nav { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; flex-wrap: wrap; gap: 10px; }
+  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .brand .wordmark { font-size: 24px; }
+  .nav-links { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .nav-links a:not(.btn) { font-family: var(--font-body); font-size: 14px; font-weight: 700;
+    color: var(--pp-ink-soft); text-decoration: none; padding: 8px 12px; border-radius: var(--radius-md); }
+  .nav-links a.here, .nav-links a:not(.btn):hover { color: var(--pp-ink); background: var(--surface-well); }
+
+  .head { text-align: center; padding: 32px 0 8px; }
+  .head h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(32px, 5vw, 52px);
+    letter-spacing: var(--tracking-display); margin: 8px 0 10px; }
+  .head p { color: var(--text-secondary); max-width: 520px; margin: 0 auto; }
+
+  .toggle { display: inline-flex; gap: 4px; margin: 26px auto 0; padding: 5px; background: var(--surface-well);
+    border: var(--border-mid); border-radius: var(--radius-pill); }
+  .toggle button { position: relative; font-family: var(--font-body); font-weight: 700; font-size: 14px;
+    padding: 9px 16px; border: 0; background: transparent; color: var(--pp-ink-soft); border-radius: var(--radius-pill); cursor: pointer; }
+  .toggle button.active { background: var(--pp-ink); color: var(--pp-paper); box-shadow: var(--shadow-sticker-sm); }
+  .toggle .save { font-family: var(--font-pixel-label); font-size: 8px; letter-spacing: .06em; color: var(--pp-lime-deep); margin-left: 6px; }
+  .toggle button.active .save { color: var(--pp-lime); }
+  .center { text-align: center; }
+
+  .plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 34px; align-items: stretch; }
+  @media (max-width: 860px) { .plans { grid-template-columns: 1fr; } .nav-links a:not(.btn){ display:none; } }
+  .plan { display: flex; flex-direction: column; padding: 28px 24px; position: relative; }
+  .plan.pop { border-color: var(--pp-teal); box-shadow: var(--shadow-sticker-lg); }
+  .plan .ribbon { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); }
+  .plan__name { font-family: var(--font-pixel-label); font-size: 11px; letter-spacing: var(--tracking-label);
+    text-transform: uppercase; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+  .plan__price { font-family: var(--font-display); font-size: 46px; line-height: 1; margin: 12px 0 0; }
+  .plan__price .per { font-family: var(--font-body); font-size: 13px; color: var(--text-muted); font-weight: 400; }
+  .plan__bill { font-size: 12px; color: var(--text-muted); margin: 6px 0 20px; min-height: 18px; }
+  .plan ul { list-style: none; padding: 0; margin: 0 0 24px; display: grid; gap: 10px; font-size: 14px; color: var(--text-secondary); }
+  .plan li { display: flex; gap: 8px; align-items: flex-start; }
+  .plan li::before { content: "✓"; color: var(--pp-lime-deep); font-weight: 700; flex: 0 0 auto; }
+  .plan li .soon { font-family: var(--font-pixel-label); font-size: 7px; letter-spacing: .06em; color: var(--pp-amber-deep);
+    border: 1px solid rgba(217,158,6,.4); border-radius: 4px; padding: 1px 4px; margin-left: 4px; white-space: nowrap; }
+  .plan .btn { margin-top: auto; text-align: center; justify-content: center; }
+  .note { text-align: center; color: var(--text-muted); font-size: 12px; margin-top: 26px; }
+  footer { border-top: var(--border-mid); padding: 24px 0; margin-top: 36px; color: var(--text-muted); font-size: 12px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <a class="brand" href="index.html">
+      <span class="blip-badge"><img src="assets/blip-white.svg" alt="" width="22"></span>
+      <span class="wordmark">POCKET<b>POP</b></span>
+    </a>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="releases.html">Releases</a>
+      <a href="database.html">Database</a>
+      <a href="stock.html">Winkels</a>
+      <a class="here" href="prijzen.html">Prijzen</a>
+    </div>
+  </nav>
+
+  <div class="head">
+    <div class="kicker" style="color:var(--pp-teal-deep);">// Prijzen</div>
+    <h1>Kies je plan</h1>
+    <p>Gratis starten, upgraden wanneer je wil. Maandelijks opzegbaar; hoe langer je periode, hoe voordeliger. Betalingen lopen veilig via Stripe.</p>
+    <div class="center">
+      <div class="toggle" id="toggle">
+        <button data-term="1" class="active">1 maand</button>
+        <button data-term="3">3 maanden<span class="save">-10%</span></button>
+        <button data-term="6">6 maanden<span class="save">-15%</span></button>
+        <button data-term="12">12 maanden<span class="save">-25%</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="plans">
+    <!-- GRATIS -->
+    <div class="card plan">
+      <div class="plan__name">Gratis</div>
+      <div class="plan__price">€0</div>
+      <div class="plan__bill">voor altijd gratis</div>
+      <ul>
+        <li>Live dashboard met je eigen watchlist</li>
+        <li>Browser- en geluidsmeldingen</li>
+        <li>Telefoon-push via ntfy</li>
+        <li>Prijshistorie &amp; filters (zoeken/sorteren)</li>
+        <li>Releases-kalender &amp; set-database</li>
+      </ul>
+      <a class="btn btn--neutral btn--body" href="dashboard.html">Start gratis</a>
+    </div>
+
+    <!-- VIP -->
+    <div class="card plan">
+      <div class="plan__name">⭐ VIP</div>
+      <div class="plan__price" data-base="2.49"><span class="amt">€2,49</span><span class="per"> /maand</span></div>
+      <div class="plan__bill" data-bill></div>
+      <ul>
+        <li>Alles van gratis</li>
+        <li><span><b>Bol Drop Status</b> — bol's eigen verkoop het eerst zien</span></li>
+        <li>Hot items: sneller checken + urgente push</li>
+        <li>Onbeperkte watchlist</li>
+        <li><span>Extra winkels zodra live<span class="soon">binnenkort</span></span></li>
+        <li><span>Discord-alerts per kanaal<span class="soon">binnenkort</span></span></li>
+      </ul>
+      <a class="btn" href="#" data-plan="vip">VIP worden</a>
+    </div>
+
+    <!-- PREMIUM -->
+    <div class="card plan pop">
+      <span class="ribbon badge badge--teal">AANBEVOLEN</span>
+      <div class="plan__name">💎 Premium</div>
+      <div class="plan__price" data-base="3.99"><span class="amt">€3,99</span><span class="per"> /maand</span></div>
+      <div class="plan__bill" data-bill></div>
+      <ul>
+        <li>Alles van VIP</li>
+        <li><span>Prijslimiet per product<span class="soon">binnenkort</span></span></li>
+        <li><span>Eigen bundels: één melding als alles samen op voorraad is<span class="soon">binnenkort</span></span></li>
+        <li><span>Push → direct naar winkelwagen<span class="soon">onderzoek</span></span></li>
+        <li><span>AI centering-check (PSA-stijl)<span class="soon">binnenkort</span></span></li>
+        <li>Vroege toegang tot nieuwe features</li>
+      </ul>
+      <a class="btn btn--secondary" href="#" data-plan="premium">Premium worden</a>
+    </div>
+  </div>
+
+  <p class="note">Prijzen incl. btw · maandelijks opzegbaar · betalingen via Stripe.<br>
+    Founding member? Tijdens de beta zijn VIP-features gratis — meld je aan en praat mee over de roadmap.</p>
+
+  <footer>PocketPop · meldingen, geen bots — jij doet zelf de bestelling.</footer>
+</div>
+
+<script>
+  // Kortingen per periode (beter dan de standaard 5/10/20).
+  var DISCOUNT = { "1": 0, "3": 0.10, "6": 0.15, "12": 0.25 };
+  var term = "1";
+
+  // Stripe Payment Links — vul per plan+periode een link in (geen backend nodig).
+  // Voorbeeld: STRIPE_LINKS.vip["12"] = "https://buy.stripe.com/xxx";
+  var STRIPE_LINKS = { vip: {}, premium: {} };
+
+  function euro(v) { return "€" + v.toFixed(2).replace(".", ","); }
+
+  function render() {
+    var d = DISCOUNT[term];
+    document.querySelectorAll(".plan__price[data-base]").forEach(function (el) {
+      var base = parseFloat(el.dataset.base);
+      var monthly = base * (1 - d);
+      el.querySelector(".amt").textContent = euro(monthly);
+      var bill = el.parentElement.querySelector("[data-bill]");
+      if (term === "1") {
+        bill.textContent = "maandelijks · opzegbaar";
+      } else {
+        var total = monthly * parseInt(term, 10);
+        bill.textContent = "€" + total.toFixed(2).replace(".", ",") + " per " + term + " mnd" +
+          (d ? "  ·  " + Math.round(d * 100) + "% korting" : "");
+      }
+    });
+  }
+
+  document.querySelectorAll("#toggle button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      document.querySelectorAll("#toggle button").forEach(function (x) { x.classList.remove("active"); });
+      b.classList.add("active");
+      term = b.dataset.term;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-plan]").forEach(function (btn) {
+    btn.addEventListener("click", function (e) {
+      var link = (STRIPE_LINKS[btn.dataset.plan] || {})[term];
+      if (link) { window.location.href = link; }
+      else { e.preventDefault(); alert("Stripe-betaallink voor dit plan is nog niet ingesteld.\n(Founding-member beta: VIP-features zijn nu gratis via 'Start gratis'.)"); }
+    });
+  });
+
+  render();
+</script>
+</body>
+</html>
