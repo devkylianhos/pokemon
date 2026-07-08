@@ -42,9 +42,11 @@ Je kunt `index.html` hosten via GitHub Pages of gewoon lokaal openen.
 
 ### 4. GitHub-secrets instellen
 In je repo → **Settings → Secrets and variables → Actions → New repository secret**,
-voeg twee secrets toe:
+voeg deze secrets toe:
 - `SUPABASE_URL` = je Project URL
 - `SUPABASE_SERVICE_KEY` = je **service_role** key
+- `BOL_CLIENT_ID` en `BOL_CLIENT_SECRET` = je Retailer API credentials
+  (zie "Bol via de officiële Retailer API" hieronder)
 
 ### 5. Watchlist vullen
 Bewerk [`tracker/watchlist.json`](tracker/watchlist.json). Per product:
@@ -52,14 +54,15 @@ Bewerk [`tracker/watchlist.json`](tracker/watchlist.json). Per product:
 {
   "name": "Productnaam",
   "ean": "0820650858079",
-  "retailer": "bol",
-  "product_id": "9300000135741181",
-  "url": "https://www.bol.com/nl/nl/p/-/9300000135741181/"
+  "retailer": "bol"
 }
 ```
-- `retailer`: momenteel wordt **`bol`** ondersteund door de scraper.
-- Geef `product_id` **of** `url` op (een directe productpagina werkt het
-  betrouwbaarst). `ean` is verplicht: het koppelt status aan gebeurtenissen.
+- `ean` en `name` zijn verplicht (een regel zonder die twee wordt overgeslagen,
+  niet fataal).
+- Met de Retailer API is **alleen de `ean` nodig** — die bevraagt bol direct.
+- `product_id` en `url` zijn optioneel en worden alleen gebruikt voor de
+  "bekijk/koop op bol"-links in het dashboard.
+- `retailer`: momenteel wordt **`bol`** ondersteund.
 
 De tracker draait daarna vanzelf. Handmatig starten kan via **Actions → boltracker
 → Run workflow**.
@@ -69,23 +72,50 @@ De tracker draait daarna vanzelf. Handmatig starten kan via **Actions → boltra
 pip install -r tracker/requirements.txt
 export SUPABASE_URL="https://JOUWPROJECT.supabase.co"
 export SUPABASE_SERVICE_KEY="je-service-role-key"
+export BOL_CLIENT_ID="je-client-id"          # officiële Retailer API
+export BOL_CLIENT_SECRET="je-client-secret"
 python tracker/tracker.py
 ```
 
-## ⚠️ Belangrijk: bol rendert prijs/voorraad client-side
-Uit testen blijkt dat bol.com de **prijs en voorraad pas via JavaScript laadt** —
-de gewone HTML-response bevat ze niet. Deze requests-gebaseerde tracker kan ze
-daarom vaak niet betrouwbaar uitlezen; hij logt dan "onbekend" en verzint géén
-valse restocks (de laatst bekende waarden blijven staan).
+## ✅ Bol via de officiële Retailer API (aanbevolen)
+De tracker gebruikt de **officiële bol Retailer API** zodra je client credentials
+instelt. Dat is dé betrouwbare route: het `competing offers`-endpoint geeft per
+EAN de actuele beste aanbieding (prijs, beschikbaarheid) — officieel, stabiel en
+met een ruime rate limit (900 requests/minuut).
 
-Om bol écht betrouwbaar te volgen zijn er twee routes:
-1. **Headless browser** (Playwright) die de pagina volledig rendert en daarna
-   prijs/voorraad uit de DOM leest. Werkt, maar is zwaarder en valt eerder op bij
-   botbescherming. Kan op GitHub Actions met een extra install-stap.
-2. **Scraping-dienst/API** (bijv. een betaalde proxy die JS rendert).
+**Credentials aanvragen:**
+1. Je hebt een **zakelijk bol-verkoopaccount** nodig via
+   [partnerplatform.bol.com](https://partnerplatform.bol.com) — registratie is
+   gratis (vereist KVK-inschrijving, btw-nummer, ID en zakelijke bankrekening;
+   je betaalt alleen commissie als je iets verkoopt).
+2. In het **Seller Dashboard → Instellingen → Diensten → API Instellingen**:
+   vul eerst een technisch contactpersoon in, maak dan onder *"Client
+   credentials voor de Retailer API"* een credential aan. ⚠️ Het secret wordt
+   maar één keer getoond — sla het direct veilig op.
+3. Voeg ze toe als GitHub-secrets: `BOL_CLIENT_ID` en `BOL_CLIENT_SECRET`
+   (naast de bestaande `SUPABASE_URL`/`SUPABASE_SERVICE_KEY`).
 
-De rest van de pijplijn (Supabase, gebeurtenis-logica, dashboard, workflow) staat
-en werkt; alleen `scrape_bol` moet je opwaarderen naar route 1 of 2 voor live data.
+Extra opties via environment variables: `BOL_DEMO=1` gebruikt bol's
+demo-omgeving (handig om je credentials/auth-flow te testen; geeft vaste
+voorbeelddata), `BOL_COUNTRY=BE` voor de Belgische winkel.
+
+**Alternatief zonder verkoopaccount:** het bol **Affiliate Program**
+(partner.bol.com) geeft toegang tot de Marketing Catalog API met een
+`offers/best`-endpoint per EAN — lagere instapdrempel, wel een
+goedkeuringsproces. Nog niet ingebouwd; laat het weten als je die route wil.
+
+**Zonder credentials** valt de tracker terug op best-effort HTML-scraping, maar
+bol rendert prijs/voorraad client-side waardoor die fallback meestal "onbekend"
+logt (en bewust géén valse restocks verzint).
+
+## Tests
+```bash
+pip install -r tracker/requirements-dev.txt
+pytest tracker/ -v
+```
+De suite bevat unit tests (event-logica, API-client met token-caching en
+429/403-afhandeling) en end-to-end tests die de echte `tracker.py` als
+subprocess draaien tegen een lokale mock van de bol API + Supabase.
 
 ## Andere winkels (MediaMarkt, Coolblue, …)
 Het dashboard toont deze winkels al met eigen badges en koop-links. De **scraper**

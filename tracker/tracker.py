@@ -21,15 +21,26 @@ from pathlib import Path
 
 import requests
 
+try:
+    from bol_api import BolRetailerClient, BolApiError, BolAuthError
+except ImportError:  # als module (python -m tracker.tracker)
+    from tracker.bol_api import BolRetailerClient, BolApiError, BolAuthError
+
 # --------------------------------------------------------------------------- #
 # Configuratie
 # --------------------------------------------------------------------------- #
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
-WATCHLIST_PATH = Path(__file__).with_name("watchlist.json")
+WATCHLIST_PATH = Path(os.environ.get("WATCHLIST", Path(__file__).with_name("watchlist.json")))
+
+# Officiële bol Retailer API (aanbevolen). Zonder credentials valt de tracker
+# terug op best-effort HTML-scraping, die bij bol vaak "onbekend" oplevert.
+BOL_CLIENT_ID = os.environ.get("BOL_CLIENT_ID", "")
+BOL_CLIENT_SECRET = os.environ.get("BOL_CLIENT_SECRET", "")
+BOL_DEMO = os.environ.get("BOL_DEMO", "") == "1"
 
 # Beleefde pauze tussen twee productverzoeken (seconden).
-REQUEST_DELAY = 1.5
+REQUEST_DELAY = float(os.environ.get("TRACKER_DELAY", "1.5"))
 HTTP_TIMEOUT = 20
 
 USER_AGENT = (
@@ -139,8 +150,29 @@ def scrape_unsupported(item, session):
     return None
 
 
+# Gedeelde API-client (lazy aangemaakt in main zodra credentials aanwezig zijn).
+_bol_client = None
+
+
+def bol_product_url(item):
+    return item.get("url") or (
+        f"https://www.bol.com/nl/nl/p/-/{item['product_id']}/"
+        if item.get("product_id")
+        else f"https://www.bol.com/nl/nl/s/?searchtext={item['ean']}"
+    )
+
+
+def check_bol(item, session):
+    """Bol-check: officiële Retailer API als die er is, anders HTML-fallback."""
+    if _bol_client is not None:
+        result = _bol_client.get_offers(item["ean"])
+        result["url"] = bol_product_url(item)
+        return result
+    return scrape_bol(item, session)
+
+
 SCRAPERS = {
-    "bol": scrape_bol,
+    "bol": check_bol,
     "mediamarkt": scrape_unsupported,
     "coolblue": scrape_unsupported,
     "amazon": scrape_unsupported,
@@ -151,6 +183,10 @@ SCRAPERS = {
 # Gebeurtenissen bepalen door nieuw met vorig te vergelijken
 # --------------------------------------------------------------------------- #
 def diff_events(prev, cur, item, ts):
+    # Eerste waarneming van een product: alleen status vastleggen, geen events.
+    # Anders zou elk nieuw watchlist-item meteen een (valse) "restock" melden.
+    if prev is None:
+        return []
     events = []
     base = {
         "retailer": item["retailer"],
@@ -160,9 +196,9 @@ def diff_events(prev, cur, item, ts):
         "url": cur.get("url"),
         "ts": ts,
     }
-    prev_in = bool(prev["in_stock"]) if prev else False
-    prev_listed = bool(prev["listed"]) if prev else False
-    prev_price = prev.get("price") if prev else None
+    prev_in = bool(prev["in_stock"])
+    prev_listed = bool(prev["listed"])
+    prev_price = prev.get("price")
 
     if cur["in_stock"] and not prev_in:
         events.append({**base, "type": "restock", "price": cur["price"]})
@@ -198,14 +234,32 @@ def sb_headers(extra=None):
 
 
 def fetch_prev_state():
-    """Haalt de huidige tracker_state op, geïndexeerd op (retailer, ean)."""
-    r = requests.get(
-        f"{SUPABASE_URL}/rest/v1/tracker_state?select=*",
-        headers=sb_headers(),
-        timeout=HTTP_TIMEOUT,
-    )
-    r.raise_for_status()
-    return {(row["retailer"], row["ean"]): row for row in r.json()}
+    """Haalt de huidige tracker_state op, geïndexeerd op (retailer, ean).
+
+    Pagineert met Range-headers: PostgREST geeft standaard max 1000 rijen terug.
+    Zonder paginatie zouden producten voorbij rij 1000 als "nieuw" gezien worden
+    en hun statuswijzigingen gemist.
+    """
+    result = {}
+    page = int(os.environ.get("STATE_PAGE_SIZE", "1000"))
+    offset = 0
+    while True:
+        r = requests.get(
+            f"{SUPABASE_URL}/rest/v1/tracker_state?select=*&order=id",
+            headers=sb_headers({"Range-Unit": "items",
+                                "Range": f"{offset}-{offset + page - 1}"}),
+            timeout=HTTP_TIMEOUT,
+        )
+        r.raise_for_status()
+        rows = r.json()
+        if not isinstance(rows, list):
+            raise BolApiError("onverwacht antwoord van Supabase bij ophalen state")
+        for row in rows:
+            result[(row["retailer"], row["ean"])] = row
+        if len(rows) < page:
+            break
+        offset += page
+    return result
 
 
 def upsert_state(rows):
@@ -236,6 +290,7 @@ def insert_events(rows):
 # Hoofdprogramma
 # --------------------------------------------------------------------------- #
 def main():
+    global _bol_client
     if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
         sys.exit("FOUT: zet SUPABASE_URL en SUPABASE_SERVICE_KEY als environment variables.")
     if not WATCHLIST_PATH.exists():
@@ -244,19 +299,32 @@ def main():
     watchlist = json.loads(WATCHLIST_PATH.read_text())
     log(f"Watchlist: {len(watchlist)} producten")
 
+    if BOL_CLIENT_ID and BOL_CLIENT_SECRET:
+        _bol_client = BolRetailerClient(BOL_CLIENT_ID, BOL_CLIENT_SECRET, demo=BOL_DEMO)
+        log("Bol-bron: officiële Retailer API" + (" (DEMO-omgeving)" if BOL_DEMO else ""))
+    else:
+        log("Bol-bron: HTML-fallback (beperkt betrouwbaar) — zet BOL_CLIENT_ID/BOL_CLIENT_SECRET voor de officiële API")
+
     prev_state = fetch_prev_state()
     session = requests.Session()
     session.headers.update({"User-Agent": USER_AGENT, "Accept-Language": "nl-NL,nl;q=0.9"})
 
     state_rows, event_rows = [], []
     for item in watchlist:
+        # Eén kapotte watchlist-regel mag de hele run niet laten crashen.
+        if not isinstance(item, dict) or not item.get("ean") or not item.get("name"):
+            log(f"  ! ongeldige watchlist-regel overgeslagen (ean en name verplicht): {item!r}")
+            continue
+        item["ean"] = str(item["ean"])
         item.setdefault("retailer", "bol")
         scraper = SCRAPERS.get(item["retailer"], scrape_unsupported)
         ts = now_iso()
         try:
             cur = scraper(item, session)
-        except requests.RequestException as e:
-            log(f"  ! {item['name']}: netwerkfout ({e}); overgeslagen")
+        except BolAuthError as e:
+            sys.exit(f"FOUT: bol-authenticatie mislukt: {e}")
+        except (BolApiError, requests.RequestException) as e:
+            log(f"  ! {item['name']}: fout bij checken ({e}); overgeslagen")
             continue
         if cur is None:  # niet-ondersteunde winkel
             continue
@@ -292,8 +360,14 @@ def main():
         log(f"  · {item['name']}: {status}, prijs {price_val}{extra}")
         time.sleep(REQUEST_DELAY)
 
-    upsert_state(state_rows)
+    # Volgorde is bewust: eerst events wegschrijven, daarna pas de state
+    # bijwerken. Zou de state eerst geschreven worden en het event-insert
+    # daarna falen, dan zou de volgende run de events niet opnieuw genereren
+    # (de state is dan al "vooruit") en zou je een restock definitief missen.
+    # Andersom is het ergste geval een dubbele melding bij de volgende run —
+    # veel minder erg dan een gemiste drop.
     insert_events(event_rows)
+    upsert_state(state_rows)
     log(f"Klaar: {len(state_rows)} statussen bijgewerkt, {len(event_rows)} gebeurtenissen gelogd.")
 
 
