@@ -334,6 +334,29 @@ def test_e2e_foute_credentials_stopt_met_duidelijke_fout(watchlist_file):
         assert "authenticatie" in (r.stdout + r.stderr).lower()
 
 
+def test_discord_payload_bol_drop():
+    ev = {"type": "bol_drop", "name": "Charizard SPC", "retailer": "bol", "price": 79.99, "product_id": "9300000182508099"}
+    p = tracker.build_discord_payload([ev])
+    assert p["username"] == "PocketPop"
+    assert len(p["embeds"]) == 1
+    emb = p["embeds"][0]
+    assert "BOL DROP" in emb["title"] and "bol.com" in emb["title"]
+    assert emb["color"] == 0xFF5D73
+    assert "9300000182508099" in emb["url"]
+    assert "Charizard" in emb["description"]
+
+
+def test_discord_payload_price_drop_shows_old_and_new():
+    ev = {"type": "price_drop", "name": "Y", "retailer": "mediamarkt", "price": 49.95, "old_price": 59.99, "ean": "111"}
+    emb = tracker.build_discord_payload([ev])["embeds"][0]
+    assert "→" in emb["description"]
+    assert "MediaMarkt" in emb["title"]
+
+
+def test_discord_payload_skips_non_alert_types():
+    assert tracker.build_discord_payload([{"type": "out_of_stock", "name": "Z"}]) is None
+
+
 def _drop_watchlist(tmp_path):
     p = tmp_path / "drop.json"
     p.write_text(json.dumps([

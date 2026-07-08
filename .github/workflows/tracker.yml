@@ -36,4 +36,6 @@ jobs:
           # Officiële bol Retailer API (aanbevolen; zie README voor het aanvragen)
           BOL_CLIENT_ID: ${{ secrets.BOL_CLIENT_ID }}
           BOL_CLIENT_SECRET: ${{ secrets.BOL_CLIENT_SECRET }}
+          # Optioneel: Discord-webhook voor alerts
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: python tracker/tracker.py

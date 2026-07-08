@@ -39,6 +39,15 @@ BOL_CLIENT_ID = os.environ.get("BOL_CLIENT_ID", "")
 BOL_CLIENT_SECRET = os.environ.get("BOL_CLIENT_SECRET", "")
 BOL_DEMO = os.environ.get("BOL_DEMO", "") == "1"
 
+# Discord-webhook voor alerts (optioneel). Leeg = geen Discord.
+DISCORD_WEBHOOK = os.environ.get("DISCORD_WEBHOOK", "")
+# Welke events een alert waard zijn (out_of_stock slaan we over — geen koopmoment).
+DISCORD_NOTIFY_TYPES = {"bol_drop", "restock", "price_drop", "drop_signal"}
+DISCORD_LABELS = {"bol_drop": "🔥 BOL DROP", "restock": "📦 Restock",
+                  "price_drop": "📉 Prijsdaling", "drop_signal": "👀 Klaargezet"}
+DISCORD_COLORS = {"bol_drop": 0xFF5D73, "restock": 0x84CC16,
+                  "price_drop": 0x0FA3B1, "drop_signal": 0xFBBF24}
+
 # Beleefde pauze tussen twee productverzoeken (seconden).
 REQUEST_DELAY = float(os.environ.get("TRACKER_DELAY", "1.5"))
 HTTP_TIMEOUT = 20
@@ -289,6 +298,79 @@ def insert_events(rows):
 # --------------------------------------------------------------------------- #
 # Hoofdprogramma
 # --------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
+# Discord-alerts
+# --------------------------------------------------------------------------- #
+def _eur(v):
+    return "€" + ("%.2f" % float(v)).replace(".", ",") if v is not None else "—"
+
+
+def _shop_label(retailer):
+    return {"bol": "bol.com", "mediamarkt": "MediaMarkt", "coolblue": "Coolblue",
+            "amazon": "Amazon", "intertoys": "Intertoys"}.get(retailer, str(retailer).title())
+
+
+def event_buy_url(e):
+    if e.get("url"):
+        return e["url"]
+    if e.get("product_id"):
+        return "https://www.bol.com/nl/nl/p/-/" + str(e["product_id"]) + "/"
+    return "https://www.bol.com/nl/nl/s/?searchtext=" + str(e.get("ean") or e.get("name") or "")
+
+
+def build_discord_payload(events):
+    """Bouwt één Discord-webhook-bericht (max 10 embeds) uit een lijst events."""
+    embeds = []
+    for e in events:
+        t = e.get("type")
+        if t not in DISCORD_NOTIFY_TYPES:
+            continue
+        if t == "price_drop":
+            money = _eur(e.get("old_price")) + " → " + _eur(e.get("price"))
+        else:
+            money = _eur(e.get("price")) if e.get("price") is not None else ""
+        desc = "**" + str(e.get("name", "")) + "**"
+        if money:
+            desc += "\n" + money
+        desc += "\n[Koop bij " + _shop_label(e.get("retailer", "bol")) + " →](" + event_buy_url(e) + ")"
+        embeds.append({
+            "title": DISCORD_LABELS.get(t, t) + " · " + _shop_label(e.get("retailer", "bol")),
+            "description": desc,
+            "color": DISCORD_COLORS.get(t, 0x1E2245),
+            "url": event_buy_url(e),
+        })
+    if not embeds:
+        return None
+    return {"username": "PocketPop", "embeds": embeds[:10]}
+
+
+def notify_discord(events):
+    """Post alle alert-waardige events naar Discord (in blokken van 10 embeds)."""
+    if not DISCORD_WEBHOOK:
+        return
+    fresh = [e for e in events if e.get("type") in DISCORD_NOTIFY_TYPES]
+    for i in range(0, len(fresh), 10):
+        payload = build_discord_payload(fresh[i:i + 10])
+        if not payload:
+            continue
+        for attempt in range(2):
+            try:
+                r = requests.post(DISCORD_WEBHOOK, json=payload, timeout=HTTP_TIMEOUT)
+                if r.status_code == 429 and attempt == 0:
+                    try:
+                        wait = float(r.json().get("retry_after", 2))
+                    except (ValueError, KeyError, AttributeError):
+                        wait = 2.0
+                    time.sleep(min(wait, 10))
+                    continue
+                if r.status_code >= 400:
+                    log(f"  ! Discord-webhook faalde (HTTP {r.status_code})")
+                break
+            except requests.RequestException as ex:
+                log(f"  ! Discord-webhook netwerkfout ({ex})")
+                break
+
+
 def main():
     global _bol_client
     if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
@@ -378,6 +460,7 @@ def main():
     # veel minder erg dan een gemiste drop.
     insert_events(event_rows)
     upsert_state(state_rows)
+    notify_discord(event_rows)  # alerts pas na het persisteren van de events
     log(f"Klaar: {len(state_rows)} statussen bijgewerkt, {len(event_rows)} gebeurtenissen gelogd.")
 
 

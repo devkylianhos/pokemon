@@ -1,0 +1,24 @@
+# systemd-unit voor de always-on tracker op een VPS.
+# Installeren:
+#   sudo cp deploy/pocketpop-tracker.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now pocketpop-tracker
+#   journalctl -u pocketpop-tracker -f      # live logs
+#
+# Pas WorkingDirectory/User/EnvironmentFile aan naar jouw setup.
+[Unit]
+Description=PocketPop tracker (bol restock/drop monitor)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pocketpop
+WorkingDirectory=/opt/pocketpop
+EnvironmentFile=/opt/pocketpop/.env
+Environment=INTERVAL=60
+ExecStart=/bin/bash /opt/pocketpop/tracker/run_loop.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
