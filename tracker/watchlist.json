@@ -118,5 +118,12 @@
     "ean": "4521329373508",
     "retailer": "bol",
     "drop_watch": true
+  },
+  {
+    "name": "Pokémon TCG: Pitch Black - Elite Trainer Box (ME05, pre-order)",
+    "ean": "0196214142138",
+    "retailer": "bol",
+    "product_id": "9300000301590428",
+    "drop_watch": true
   }
 ]
