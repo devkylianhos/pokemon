@@ -274,16 +274,32 @@ def fetch_prev_state():
     return result
 
 
+# Postgres tekst accepteert geen NUL/control-tekens; scraped shopdata bevat die
+# soms (levert een 400 bij insert). Strip ze uit alle string-velden.
+_CTRL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+
+def _sanitize_rows(rows):
+    def clean(v):
+        return _CTRL_RE.sub("", v) if isinstance(v, str) else v
+    return [{k: clean(v) for k, v in row.items()} for row in rows]
+
+
+def _raise_with_body(r, what):
+    if r.status_code >= 400:
+        raise requests.HTTPError(f"{what} faalde (HTTP {r.status_code}): {r.text[:300]}", response=r)
+
+
 def upsert_state(rows):
     if not rows:
         return
     r = requests.post(
         f"{SUPABASE_URL}/rest/v1/tracker_state?on_conflict=retailer,ean",
         headers=sb_headers({"Prefer": "resolution=merge-duplicates,return=minimal"}),
-        data=json.dumps(rows),
+        data=json.dumps(_sanitize_rows(rows)),
         timeout=HTTP_TIMEOUT,
     )
-    r.raise_for_status()
+    _raise_with_body(r, "upsert_state")
 
 
 def insert_events(rows):
@@ -292,10 +308,10 @@ def insert_events(rows):
     r = requests.post(
         f"{SUPABASE_URL}/rest/v1/tracker_events",
         headers=sb_headers({"Prefer": "return=minimal"}),
-        data=json.dumps(rows),
+        data=json.dumps(_sanitize_rows(rows)),
         timeout=HTTP_TIMEOUT,
     )
-    r.raise_for_status()
+    _raise_with_body(r, "insert_events")
 
 
 # --------------------------------------------------------------------------- #
