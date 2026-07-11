@@ -374,6 +374,23 @@ def notify_discord(events):
                 break
 
 
+def delete_state(keys):
+    """Verwijder tracker_state-rijen (retailer, ean) die niet meer gevolgd worden."""
+    from collections import defaultdict
+    by_ret = defaultdict(list)
+    for retailer, ean in keys:
+        by_ret[retailer].append(str(ean))
+    for retailer, eans in by_ret.items():
+        for i in range(0, len(eans), 50):
+            inlist = ",".join(eans[i:i + 50])
+            r = requests.delete(
+                f"{SUPABASE_URL}/rest/v1/tracker_state?retailer=eq.{retailer}&ean=in.({inlist})",
+                headers=sb_headers({"Prefer": "return=minimal"}),
+                timeout=HTTP_TIMEOUT,
+            )
+            r.raise_for_status()
+
+
 def main():
     global _bol_client
     if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
@@ -495,6 +512,15 @@ def main():
     # veel minder erg dan een gemiste drop.
     insert_events(event_rows)
     upsert_state(state_rows)
+    # Ruim rijen op van producten die niet meer gevolgd worden (filter aangescherpt
+    # of uit de watchlist gehaald). Alléén voor winkels die deze run data gaven,
+    # zodat een tijdelijke fetch-fout niet per ongeluk een hele winkel wist.
+    processed = {r["retailer"] for r in state_rows}
+    seen = {(r["retailer"], r["ean"]) for r in state_rows}
+    stale = [k for k in prev_state if k[0] in processed and k not in seen]
+    if stale:
+        delete_state(stale)
+        log(f"Opgeruimd: {len(stale)} verouderde rijen verwijderd.")
     notify_discord(event_rows)  # alerts pas na het persisteren van de events
     log(f"Klaar: {len(state_rows)} statussen bijgewerkt, {len(event_rows)} gebeurtenissen gelogd.")
 

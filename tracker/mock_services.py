@@ -14,9 +14,10 @@ direct te inspecteren via `server.state` en `server.events`.
 """
 
 import json
+import re
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 
 
 class MockState:
@@ -158,6 +159,19 @@ def _make_handler(mock: MockState):
             if path == "/rest/v1/tracker_state":
                 return self._supabase_get_state()
             return self._send(404, {"detail": "onbekend pad " + path})
+
+        def do_DELETE(self):
+            parsed = urlparse(self.path)
+            mock.requests.append(("DELETE", parsed.path))
+            if parsed.path == "/rest/v1/tracker_state":
+                q = parse_qs(parsed.query)
+                retailer = q.get("retailer", ["eq."])[0].replace("eq.", "")
+                m = re.match(r"in\.\((.*)\)", q.get("ean", [""])[0])
+                eans = [x.strip('"') for x in m.group(1).split(",") if x] if m else []
+                for e in eans:
+                    mock.state.pop((retailer, e), None)
+                return self._send(204, None)
+            return self._send(404, {"detail": "onbekend pad " + parsed.path})
 
     return Handler
 

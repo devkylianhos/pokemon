@@ -16,24 +16,27 @@ import re
 HTTP_TIMEOUT = 20
 MAX_PAGES = 5  # beleefd: max ~1250 (Shopify) / 500 (Woo) producten per shop
 
-# Alleen echte Pokémon sealed-producten, geen accessoires/singles.
+# Alleen de échte snipe-targets: grote sealed-boxen. Losse booster packs en
+# kleine blisters zijn ruis en vliegen eruit, net als accessoires/singles.
+NOISE = ["booster pack", "boosterpack", "1 pakje", "los pakje", "losse booster",
+         "blister", "single", "losse kaart", "checklane", "sample"]
 ACCESSORY = ["case", "acryl", "hoes", "sleeve", "protector", "portfolio", "binder",
-             "toploader", "deck box", "stand", "playmat", "dobbel", "sorter", "album",
-             "map ", "single", "losse kaart"]
-SEALED = ["booster box", "booster bundle", "elite trainer", "etb", "booster pack",
-          "boosterpack", "boosterbox", "tin", "premium collection", "collection box",
-          "blister", "display", "build & battle", "surprise box", "ultra premium"]
+             "toploader", "deck box", "deckbox", "stand", "playmat", "dobbel", "sorter",
+             "album", "map ", "screen", "display frame", "sticker", "pin ", "pluche"]
+TARGET = ["booster box", "boosterbox", "booster display", "elite trainer", "etb",
+          "ultra premium", "premium collection", "collection box", "booster bundle",
+          "tin", "build & battle", "build and battle", "surprise box", "mega tin"]
 
 
 def is_pokemon_sealed(title):
-    t = (title or "").lower()
+    """True voor echte sealed-targets (boxen/ETB/bundle/premium/tin), niet voor
+    losse pakjes, blisters of accessoires."""
+    t = " " + (title or "").lower() + " "
+    if any(k in t for k in NOISE):
+        return False
     if any(k in t for k in ACCESSORY):
         return False
-    if "pok" not in t and "pokemon" not in t and "pokémon" not in t:
-        # shop kan Pokémon-only zijn; dan mag de naam de merknaam missen —
-        # maar eis dan wel een duidelijk sealed-type om ruis te weren.
-        return any(k in t for k in SEALED)
-    return any(k in t for k in SEALED)
+    return any(k in t for k in TARGET)
 
 
 def _clean(name):

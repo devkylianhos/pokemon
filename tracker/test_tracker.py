@@ -381,10 +381,17 @@ def test_shops_woo_parse_prices_in_cents_and_html():
 
 
 def test_shops_pokemon_sealed_filter():
+    # targets: echte sealed-boxen blijven
     assert shops.is_pokemon_sealed("Pokémon Surging Sparks Booster Box")
     assert shops.is_pokemon_sealed("Mega Evolution Elite Trainer Box")
-    assert not shops.is_pokemon_sealed("Pokémon Card Sleeves 65 stuks")   # accessoire
-    assert not shops.is_pokemon_sealed("Charizard V single kaart")        # single
+    assert shops.is_pokemon_sealed("Prismatic Evolutions Booster Bundle")
+    assert shops.is_pokemon_sealed("Charizard ex Ultra Premium Collection")
+    # ruis: losse pakjes, blisters, accessoires, singles vallen eruit
+    assert not shops.is_pokemon_sealed("Pokémon Surging Sparks Booster Pack")
+    assert not shops.is_pokemon_sealed("Journey Together – Booster Pack")
+    assert not shops.is_pokemon_sealed("Erika's Tangela 2-Pack Blister")
+    assert not shops.is_pokemon_sealed("Pokémon Card Sleeves 65 stuks")
+    assert not shops.is_pokemon_sealed("Charizard V single kaart")
 
 
 def test_discord_payload_bol_drop():
@@ -408,6 +415,22 @@ def test_discord_payload_price_drop_shows_old_and_new():
 
 def test_discord_payload_skips_non_alert_types():
     assert tracker.build_discord_payload([{"type": "out_of_stock", "name": "Z"}]) is None
+
+
+def test_e2e_prune_verwijdert_oude_rijen(tmp_path):
+    full = tmp_path / "wl.json"; full.write_text(json.dumps(WATCHLIST))          # 111 + 222
+    small = tmp_path / "wl2.json"; small.write_text(json.dumps([WATCHLIST[0]]))  # alleen 111
+    with MockServer() as server:
+        server.mock.scenario["111"] = {"listed": True, "in_stock": True, "price": 10.0}
+        server.mock.scenario["222"] = {"listed": True, "in_stock": True, "price": 20.0}
+        run_tracker(server, full)
+        assert ("bol", "222") in server.mock.state
+        # 222 uit de watchlist -> volgende run moet z'n rij opruimen
+        r = run_tracker(server, small)
+        assert r.returncode == 0, r.stderr
+        assert ("bol", "111") in server.mock.state
+        assert ("bol", "222") not in server.mock.state
+        assert "Opgeruimd" in r.stdout
 
 
 def _drop_watchlist(tmp_path):
