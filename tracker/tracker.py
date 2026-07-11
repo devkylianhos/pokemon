@@ -279,10 +279,18 @@ def fetch_prev_state():
 _CTRL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
 
-def _sanitize_rows(rows):
+def _prep_rows(rows):
+    """Maak rijen klaar voor een PostgREST bulk-insert:
+    - normaliseer naar één gedeelde key-set (PostgREST eist 'All object keys must
+      match'; price_drop-events hebben old_price, andere niet -> vul aan met None);
+    - strip NUL/control-tekens uit strings.
+    """
+    keys = set()
+    for r in rows:
+        keys.update(r.keys())
     def clean(v):
         return _CTRL_RE.sub("", v) if isinstance(v, str) else v
-    return [{k: clean(v) for k, v in row.items()} for row in rows]
+    return [{k: clean(r.get(k)) for k in keys} for r in rows]
 
 
 def _raise_with_body(r, what):
@@ -296,7 +304,7 @@ def upsert_state(rows):
     r = requests.post(
         f"{SUPABASE_URL}/rest/v1/tracker_state?on_conflict=retailer,ean",
         headers=sb_headers({"Prefer": "resolution=merge-duplicates,return=minimal"}),
-        data=json.dumps(_sanitize_rows(rows)),
+        data=json.dumps(_prep_rows(rows)),
         timeout=HTTP_TIMEOUT,
     )
     _raise_with_body(r, "upsert_state")
@@ -308,7 +316,7 @@ def insert_events(rows):
     r = requests.post(
         f"{SUPABASE_URL}/rest/v1/tracker_events",
         headers=sb_headers({"Prefer": "return=minimal"}),
-        data=json.dumps(_sanitize_rows(rows)),
+        data=json.dumps(_prep_rows(rows)),
         timeout=HTTP_TIMEOUT,
     )
     _raise_with_body(r, "insert_events")

@@ -135,7 +135,12 @@ def _make_handler(mock: MockState):
             rows = self._read_body()
             if mock.fail_events:
                 return self._send(500, {"detail": "insert mislukt"})
-            mock.events.extend(rows if isinstance(rows, list) else [rows])
+            rows = rows if isinstance(rows, list) else [rows]
+            # PostgREST-regel: bij een bulk-insert moeten alle objecten dezelfde
+            # keys hebben, anders PGRST102. De mock dwingt dit af zodat tests het vangen.
+            if len({frozenset(r.keys()) for r in rows}) > 1:
+                return self._send(400, {"code": "PGRST102", "message": "All object keys must match"})
+            mock.events.extend(rows)
             return self._send(201, [])
 
         # ---------------- routing ---------------- #
